@@ -58,6 +58,44 @@ class AsaasController extends Controller
         return redirect()->route('onboarding.show')->with('onboarding_status', $message);
     }
 
+    public function pause(Request $request): RedirectResponse
+    {
+        $subscription = $request->user()->subscription;
+
+        if (! $subscription) {
+            return redirect()->route('profile.edit')->with('subscription_status', 'Nenhuma assinatura encontrada para pausar.');
+        }
+
+        try {
+            $this->asaasGateway->pauseSubscription($subscription);
+        } catch (\Throwable $exception) {
+            return redirect()->route('profile.edit')->with('subscription_status', 'Nao foi possivel pausar a recorrencia no momento.');
+        }
+
+        return redirect()->route('profile.edit')->with('subscription_status', 'Assinatura pausada. Novas cobrancas recorrentes foram interrompidas.');
+    }
+
+    public function reactivate(Request $request): RedirectResponse
+    {
+        $subscription = $request->user()->subscription;
+
+        if (! $subscription) {
+            return redirect()->route('profile.edit')->with('subscription_status', 'Nenhuma assinatura encontrada para reativar.');
+        }
+
+        try {
+            if (filled($subscription->provider_subscription_id)) {
+                $this->asaasGateway->reactivateSubscription($subscription);
+            } else {
+                return $this->checkout($request);
+            }
+        } catch (\Throwable $exception) {
+            return redirect()->route('profile.edit')->with('subscription_status', 'Nao foi possivel reativar a assinatura agora.');
+        }
+
+        return redirect()->route('profile.edit')->with('subscription_status', 'Recorrencia reativada. O acesso volta quando a proxima cobranca for confirmada.');
+    }
+
     public function webhook(Request $request): Response
     {
         $configuredToken = config('services.asaas.webhook_token');

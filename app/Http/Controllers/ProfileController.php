@@ -28,6 +28,7 @@ class ProfileController extends Controller
             'user' => $request->user(),
             'uberConnection' => $request->user()->uberConnection,
             'tripSummary' => $tripSummary,
+            'subscription' => $request->user()->subscription?->loadMissing('charges'),
         ]);
     }
 

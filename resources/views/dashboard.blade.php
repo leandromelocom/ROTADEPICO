@@ -28,25 +28,25 @@
                             {{ $bestNow['zone_name'] }} foi promovida porque combina com seu veiculo, seu turno e a janela operacional atual.
                         </p>
                     </div>
-                    <span class="score-badge">Score {{ $bestNow['predicted_score'] }}</span>
+                    <span class="score-badge" data-live-best-score>Score {{ $bestNow['predicted_score'] }}</span>
                 </div>
 
                 <div class="metric-grid">
                     <article class="metric-card">
                         <div class="metric-label">Ticket</div>
-                        <div class="metric-value">R$ {{ number_format($bestNow['avg_fare'], 2, ',', '.') }}</div>
+                        <div class="metric-value" data-live-ticket>R$ {{ number_format($bestNow['avg_fare'], 2, ',', '.') }}</div>
                     </article>
                     <article class="metric-card">
                         <div class="metric-label">Janela</div>
-                        <div class="metric-value">{{ $bestNow['best_window'] }}</div>
+                        <div class="metric-value" data-live-window>{{ $bestNow['best_window'] }}</div>
                     </article>
                     <article class="metric-card">
                         <div class="metric-label">Fit perfil</div>
-                        <div class="metric-value">{{ $bestNow['fit_score'] }}%</div>
+                        <div class="metric-value" data-live-fit>{{ $bestNow['fit_score'] }}%</div>
                     </article>
                     <article class="metric-card">
                         <div class="metric-label">Hora util</div>
-                        <div class="metric-value">R$ {{ number_format($bestNow['expected_hourly'], 2, ',', '.') }}</div>
+                        <div class="metric-value" data-live-hourly>R$ {{ number_format($bestNow['expected_hourly'], 2, ',', '.') }}</div>
                     </article>
                 </div>
 
@@ -54,11 +54,11 @@
                     <article class="callout">
                         <p class="metric-label orange">Leitura tatica</p>
                         <p class="profile-copy">{{ $bestNow['tip'] }}</p>
-                        <p class="profile-copy orange">{{ $bestNow['recommendation'] }}</p>
+                        <p class="profile-copy orange" data-live-recommendation>{{ $bestNow['recommendation'] }}</p>
                     </article>
                     <article class="feature-card">
                         <p class="metric-label">Sinais do algoritmo</p>
-                        <div class="chip-group">
+                        <div class="chip-group" data-live-signals>
                             @foreach ($bestNow['signals'] as $signal)
                                 <span class="chip">{{ $signal }}</span>
                             @endforeach
@@ -79,9 +79,9 @@
                     <p class="profile-copy">Pontuacao final ja ajustada ao seu perfil.</p>
                 </article>
                 <article class="stat-card">
-                    <p class="metric-label">Aderencia media</p>
-                    <div class="metric-value">{{ $stats['fit_average'] }}%</div>
-                    <p class="profile-copy">Quanto o radar atual conversa com seu turno e veiculo.</p>
+                    <p class="metric-label">Melhor distancia</p>
+                    <div class="metric-value" data-live-distance>{{ $stats['closest_best_distance_km'] !== null ? number_format($stats['closest_best_distance_km'], 1, ',', '.') . ' km' : 'GPS livre' }}</div>
+                    <p class="profile-copy">Distancia ate a melhor zona calculada com sua localizacao atual.</p>
                 </article>
                 <article class="stat-card">
                     <p class="metric-label">Zonas monitoradas</p>
@@ -89,6 +89,54 @@
                     <p class="profile-copy">Radar inicial com foco em Sao Paulo.</p>
                 </article>
             </aside>
+        </div>
+
+        <div class="ranking-grid" style="margin-top: 18px;">
+            <section class="panel">
+                <div class="spread-row">
+                    <div>
+                        <p class="metric-label">Va agora</p>
+                        <h2 class="section-title">Recomendacao imediata por proximidade</h2>
+                        <p class="section-copy">Quando o GPS responde, o motor recalcula score, horario e deslocamento para decidir a melhor zona agora.</p>
+                    </div>
+                    <span class="small-chip">Local + timing</span>
+                </div>
+
+                <article class="feature-card live-recommendation-card" style="margin-top: 18px;">
+                    <div class="spread-row">
+                        <div>
+                            <p class="metric-label" data-live-now-label>Va agora para</p>
+                            <h3 class="card-title" data-live-now-zone>{{ $bestNow['zone_name'] }}</h3>
+                        </div>
+                        <span class="score-badge" data-live-now-priority>{{ $bestNow['distance_km'] !== null ? number_format($bestNow['distance_km'], 1, ',', '.') . ' km' : 'aguardando GPS' }}</span>
+                    </div>
+                    <p class="profile-copy" data-live-now-copy>{{ $bestNow['recommendation'] }}</p>
+                </article>
+            </section>
+
+            <section class="panel">
+                <div class="spread-row">
+                    <div>
+                        <p class="metric-label">Ranking por horario</p>
+                        <h2 class="section-title">Como o mapa aquece nas proximas horas</h2>
+                    </div>
+                    <span class="small-chip">Agora ate +3h</span>
+                </div>
+
+                <div class="timeline-grid" style="margin-top: 18px;" data-hourly-rankings>
+                    @foreach ($hourlyRankings as $slot)
+                        <article class="timeline-card">
+                            <p class="metric-label">{{ $slot['label'] }}</p>
+                            <h3 class="card-title">{{ $slot['zone_name'] }}</h3>
+                            <p class="profile-copy">{{ $slot['best_window'] }}</p>
+                            <div class="detail-row">
+                                <span>Score {{ $slot['predicted_score'] }}</span>
+                                <span class="sky">R$ {{ number_format($slot['expected_hourly'], 2, ',', '.') }}/h</span>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            </section>
         </div>
 
         <section class="panel" style="margin-top: 18px;">
@@ -111,6 +159,7 @@
                     data-map-default-lat="-23.550520"
                     data-map-default-lng="-46.633308"
                     data-map-default-zoom="11"
+                    data-location-endpoint="{{ route('radar.location') }}"
                 ></div>
 
                 <aside class="map-panel">
@@ -144,7 +193,7 @@
                                 <p class="profile-copy">{{ $zone['recommendation'] }}</p>
                                 <div class="detail-row">
                                     <span>{{ $zone['best_window'] }}</span>
-                                    <span class="sky">R$ {{ number_format($zone['avg_fare'], 2, ',', '.') }}</span>
+                                    <span class="sky">{{ $zone['distance_km'] !== null ? number_format($zone['distance_km'], 1, ',', '.') . ' km' : 'R$ ' . number_format($zone['avg_fare'], 2, ',', '.') }}</span>
                                 </div>
                                 <div class="detail-row">
                                     <span>{{ $zone['pay_label'] }}</span>
@@ -156,6 +205,61 @@
                 </aside>
             </div>
         </section>
+
+        <div class="ranking-grid" style="margin-top: 18px;">
+            <section class="panel">
+                <div class="spread-row">
+                    <div>
+                        <p class="metric-label">Comparacao entre regioes proximas</p>
+                        <h2 class="section-title">O que vale mais perto de voce</h2>
+                    </div>
+                    <span class="small-chip">Distancia x retorno</span>
+                </div>
+
+                <div class="list-stack" style="margin-top: 18px;" data-nearby-comparisons>
+                    @foreach ($nearbyComparisons as $zone)
+                        <article class="feature-card">
+                            <div class="spread-row">
+                                <div>
+                                    <p class="metric-label">{{ $zone['distance_km'] !== null ? number_format($zone['distance_km'], 1, ',', '.') . ' km' : 'sem gps' }}</p>
+                                    <h3 class="card-title">{{ $zone['zone_name'] }}</h3>
+                                </div>
+                                <span class="score-badge">R$ {{ number_format($zone['avg_fare'], 2, ',', '.') }}</span>
+                            </div>
+                            <p class="profile-copy">{{ $zone['reason'] }}</p>
+                            <div class="detail-row">
+                                <span>{{ $zone['best_window'] }}</span>
+                                <span class="sky">Score local {{ $zone['localized_priority'] }}</span>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="spread-row">
+                    <div>
+                        <p class="metric-label">Previsao por turno</p>
+                        <h2 class="section-title">Quando cada zona deve aquecer mais</h2>
+                    </div>
+                    <span class="small-chip">Motor de aquecimento</span>
+                </div>
+
+                <div class="forecast-grid" style="margin-top: 18px;" data-shift-forecasts>
+                    @foreach ($shiftForecasts as $forecast)
+                        <article class="forecast-card">
+                            <p class="metric-label">{{ $forecast['shift'] }}</p>
+                            <h3 class="card-title">{{ $forecast['zone_name'] }}</h3>
+                            <p class="profile-copy">{{ $forecast['best_window'] }}</p>
+                            <div class="detail-row">
+                                <span>R$ {{ number_format($forecast['expected_hourly'], 2, ',', '.') }}/h</span>
+                                <span class="sky">Turno {{ $forecast['shift'] }}</span>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            </section>
+        </div>
 
         <section class="panel" style="margin-top: 18px;">
             <div class="spread-row">
@@ -182,7 +286,7 @@
                         <p class="profile-copy">Janela {{ $region['best_window'] }} • {{ $region['route_profile'] }}</p>
                         <div class="detail-row">
                             <span>Score {{ $region['predicted_score'] }}</span>
-                            <span class="sky">Foco em ticket</span>
+                            <span class="sky">{{ $region['distance_km'] !== null ? number_format($region['distance_km'], 1, ',', '.') . ' km' : 'Foco em ticket' }}</span>
                         </div>
                     </article>
                 @endforeach
@@ -284,8 +388,8 @@
             "userPopupBody": "Posicao atual usada para calcular a melhor zona por proximidade.",
             "distanceSuffix": "km",
             "fallbackStatus": "Nao foi possivel obter sua localizacao. O mapa foi aberto em Sao Paulo com as melhores zonas do radar.",
-            "readyStatus": "Sua localizacao foi encontrada. As zonas abaixo foram ordenadas pela melhor combinacao de score e proximidade.",
-            "loadingStatus": "Solicitando sua localizacao para mostrar a melhor zona perto de voce."
+            "readyStatus": "Sua localizacao foi encontrada. As zonas abaixo foram ordenadas pela melhor combinacao de score, horario e proximidade.",
+            "loadingStatus": "Solicitando sua localizacao para recalcular o radar em tempo real."
         }
     </script>
 </x-app-layout>

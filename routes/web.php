@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\RadarLocationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AsaasController;
 use App\Http\Controllers\OnboardingController;
@@ -17,11 +19,15 @@ Route::get('/dashboard', DashboardController::class)
     ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/admin', AdminDashboardController::class)->name('admin.dashboard');
     Route::get('/onboarding', [OnboardingController::class, 'show'])->name('onboarding.show');
     Route::post('/onboarding/profile', [OnboardingController::class, 'updateProfile'])->name('onboarding.profile');
     Route::post('/onboarding/location', [OnboardingController::class, 'activateLocation'])->name('onboarding.location');
     Route::post('/onboarding/subscription', [AsaasController::class, 'checkout'])->name('onboarding.subscription');
     Route::post('/onboarding/finish', [OnboardingController::class, 'finish'])->name('onboarding.finish');
+    Route::post('/radar/location', [RadarLocationController::class, 'update'])->name('radar.location');
+    Route::post('/subscription/pause', [AsaasController::class, 'pause'])->name('subscription.pause');
+    Route::post('/subscription/reactivate', [AsaasController::class, 'reactivate'])->name('subscription.reactivate');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

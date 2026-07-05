@@ -6,6 +6,9 @@
 
         <div class="nav-links desktop-only">
             <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'is-active' : '' }}">Radar</a>
+            @if (Auth::user()->is_admin)
+                <a href="{{ route('admin.dashboard') }}" class="nav-link {{ request()->routeIs('admin.dashboard') ? 'is-active' : '' }}">Admin</a>
+            @endif
             <a href="{{ route('profile.edit') }}" class="nav-link {{ request()->routeIs('profile.*') ? 'is-active' : '' }}">Perfil</a>
         </div>
 
@@ -31,6 +34,9 @@
 
     <div id="mobile-menu" class="mobile-menu mobile-only" data-toggle-panel hidden>
         <a href="{{ route('dashboard') }}" class="mobile-link">Radar</a>
+        @if (Auth::user()->is_admin)
+            <a href="{{ route('admin.dashboard') }}" class="mobile-link">Admin</a>
+        @endif
         <a href="{{ route('profile.edit') }}" class="mobile-link">Perfil</a>
         <div class="mobile-user">
             <strong>{{ Auth::user()->name }}</strong>

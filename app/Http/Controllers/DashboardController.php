@@ -11,6 +11,10 @@ class DashboardController extends Controller
 {
     public function __invoke(OpportunityRadar $radar): View|RedirectResponse
     {
+        if (auth()->user()->is_admin) {
+            return redirect()->route('admin.dashboard');
+        }
+
         if (! auth()->user()->onboarding_completed_at || ! (auth()->user()->subscription?->isActive() ?? false)) {
             return redirect()->route('onboarding.show');
         }

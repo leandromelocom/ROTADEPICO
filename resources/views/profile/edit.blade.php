@@ -10,6 +10,12 @@
         <div class="profile-layout">
             <div class="profile-card">
                 <div class="max-w-xl">
+                    @include('profile.partials.subscription-card')
+                </div>
+            </div>
+
+            <div class="profile-card">
+                <div class="max-w-xl">
                     @include('profile.partials.uber-connection-card')
                 </div>
             </div>

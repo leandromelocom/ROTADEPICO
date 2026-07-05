@@ -16,10 +16,14 @@ use Illuminate\Notifications\Notifiable;
     'name',
     'email',
     'password',
+    'is_admin',
     'phone',
     'city',
     'vehicle_type',
     'work_shift',
+    'last_known_latitude',
+    'last_known_longitude',
+    'last_location_reported_at',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
@@ -36,7 +40,13 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'is_admin' => 'boolean',
             'password' => 'hashed',
+            'onboarding_completed_at' => 'datetime',
+            'location_permission_granted_at' => 'datetime',
+            'last_known_latitude' => 'float',
+            'last_known_longitude' => 'float',
+            'last_location_reported_at' => 'datetime',
         ];
     }
 
@@ -53,5 +63,10 @@ class User extends Authenticatable
     public function subscription(): HasOne
     {
         return $this->hasOne(Subscription::class);
+    }
+
+    public function hasCompletedOnboarding(): bool
+    {
+        return $this->onboarding_completed_at !== null;
     }
 }

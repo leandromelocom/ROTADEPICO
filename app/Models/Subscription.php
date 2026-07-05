@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'user_id',
@@ -44,9 +45,34 @@ class Subscription extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function charges(): HasMany
+    {
+        return $this->hasMany(SubscriptionCharge::class)->latest('due_date')->latest('id');
+    }
+
     public function isActive(): bool
     {
         return in_array($this->status, ['active', 'trialing'], true)
             && ($this->renews_at?->isFuture() || $this->trial_ends_at?->isFuture());
+    }
+
+    public function isBlocked(): bool
+    {
+        return ! $this->isActive();
+    }
+
+    public function canPause(): bool
+    {
+        return in_array($this->status, ['active', 'pending'], true);
+    }
+
+    public function canReactivate(): bool
+    {
+        return in_array($this->status, ['inactive', 'canceled'], true);
+    }
+
+    public function canRegularize(): bool
+    {
+        return $this->status === 'overdue';
     }
 }
