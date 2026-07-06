@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Rotadepico Companion</string>
+    <string name="app_subtitle">Escuta a notificacao da Uber, chama o motor do Rotadepico e devolve a decisao na tela do motorista.</string>
+    <string name="api_base_url_hint">URL base da plataforma</string>
+    <string name="bearer_token_hint">Bearer token gerado no perfil</string>
+    <string name="device_id_hint">Identificacao do aparelho</string>
+    <string name="save_settings">Salvar configuracao</string>
+    <string name="status_title">Status operacional</string>
+    <string name="status_endpoint">Endpoint base</string>
+    <string name="status_token">Token mobile</string>
+    <string name="status_listener">Acesso a notificacoes</string>
+    <string name="status_overlay">Permissao de overlay</string>
+    <string name="status_ready">Pronto</string>
+    <string name="status_pending">Pendente</string>
+    <string name="open_notification_access">Abrir acesso a notificacoes</string>
+    <string name="open_overlay_access">Abrir permissao de overlay</string>
+    <string name="request_notification_permission">Permitir notificacoes</string>
+    <string name="listener_service_label">Rotadepico Listener</string>
+    <string name="decision_channel_name">Decisoes do Rotadepico</string>
+    <string name="overlay_default_title">Rota de Pico</string>
+    <string name="overlay_default_message">Analise processada em tempo real.</string>
+</resources>

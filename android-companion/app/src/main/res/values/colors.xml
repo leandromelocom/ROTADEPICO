@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="surface_root">#071123</color>
+    <color name="surface_card">#0D1A33</color>
+    <color name="surface_field">#12213D</color>
+    <color name="brand_orange">#FF9D43</color>
+    <color name="text_primary">#FFF5EA</color>
+    <color name="text_secondary">#9BB4D5</color>
+    <color name="overlay_positive">#127A52</color>
+    <color name="overlay_warning">#AD6A10</color>
+    <color name="overlay_danger">#8D2B3A</color>
+</resources>
