@@ -24,6 +24,9 @@ use Illuminate\Notifications\Notifiable;
     'last_known_latitude',
     'last_known_longitude',
     'last_location_reported_at',
+    'mobile_api_token_hash',
+    'mobile_api_token_created_at',
+    'mobile_api_token_last_used_at',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
@@ -47,6 +50,8 @@ class User extends Authenticatable
             'last_known_latitude' => 'float',
             'last_known_longitude' => 'float',
             'last_location_reported_at' => 'datetime',
+            'mobile_api_token_created_at' => 'datetime',
+            'mobile_api_token_last_used_at' => 'datetime',
         ];
     }
 
@@ -60,6 +65,11 @@ class User extends Authenticatable
         return $this->hasMany(DriverTrip::class);
     }
 
+    public function rideOfferEvaluations(): HasMany
+    {
+        return $this->hasMany(RideOfferEvaluation::class)->latest('evaluated_at')->latest('id');
+    }
+
     public function subscription(): HasOne
     {
         return $this->hasOne(Subscription::class);
@@ -68,5 +78,10 @@ class User extends Authenticatable
     public function hasCompletedOnboarding(): bool
     {
         return $this->onboarding_completed_at !== null;
+    }
+
+    public function hasMobileApiToken(): bool
+    {
+        return filled($this->mobile_api_token_hash);
     }
 }

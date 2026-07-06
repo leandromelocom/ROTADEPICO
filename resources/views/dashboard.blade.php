@@ -139,6 +139,112 @@
             </section>
         </div>
 
+        <div class="ranking-grid" style="margin-top: 18px;">
+            <section class="panel">
+                <div class="spread-row">
+                    <div>
+                        <p class="metric-label">Leitura da notificacao</p>
+                        <h2 class="section-title">Decisao instantanea da corrida</h2>
+                        <p class="section-copy">
+                            Simule a oferta capturada do celular e receba em segundos a resposta do motor: vale a pena, nao vale, risco alto ou destino ruim.
+                        </p>
+                    </div>
+                    <span class="small-chip">Pronto para o app Android</span>
+                </div>
+
+                <form class="list-stack" style="margin-top: 18px;" data-offer-simulator data-endpoint="{{ route('radar.offer-decision') }}">
+                    <div class="metric-grid">
+                        <label class="feature-card">
+                            <span class="metric-label">Valor da corrida</span>
+                            <input class="profile-field" type="number" step="0.01" min="0" name="quoted_fare" placeholder="32.90">
+                        </label>
+                        <label class="feature-card">
+                            <span class="metric-label">Distancia ate embarque (km)</span>
+                            <input class="profile-field" type="number" step="0.1" min="0" name="pickup_distance_km" placeholder="1.8">
+                        </label>
+                        <label class="feature-card">
+                            <span class="metric-label">Distancia da viagem (km)</span>
+                            <input class="profile-field" type="number" step="0.1" min="0" name="trip_distance_km" placeholder="7.4">
+                        </label>
+                        <label class="feature-card">
+                            <span class="metric-label">Tempo ate embarque (min)</span>
+                            <input class="profile-field" type="number" min="0" name="pickup_eta_minutes" placeholder="5">
+                        </label>
+                    </div>
+
+                    <div class="metric-grid">
+                        <label class="feature-card">
+                            <span class="metric-label">Multiplicador</span>
+                            <input class="profile-field" type="number" step="0.1" min="1" name="surge_multiplier" placeholder="1.3">
+                        </label>
+                        <label class="feature-card">
+                            <span class="metric-label">Regiao de destino</span>
+                            <input class="profile-field" type="text" name="destination_zone_name" placeholder="Zona Sul Premium">
+                        </label>
+                        <label class="feature-card" style="grid-column: span 2;">
+                            <span class="metric-label">Texto cru da notificacao</span>
+                            <input class="profile-field" type="text" name="notification_text" placeholder="Uber: R$ 32,90, embarque a 2 min, destino Zona Sul">
+                        </label>
+                    </div>
+
+                    <div class="stack-actions">
+                        <button type="submit" class="solid-button">Analisar corrida agora</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="panel">
+                <div class="spread-row">
+                    <div>
+                        <p class="metric-label">Resposta do motor</p>
+                        <h2 class="section-title">Decisao operacional</h2>
+                    </div>
+                    <span class="small-chip" data-offer-decision-badge>Aguardando oferta</span>
+                </div>
+
+                <article class="feature-card" style="margin-top: 18px;" data-offer-decision-card>
+                    <div class="spread-row">
+                        <div>
+                            <p class="metric-label">Status</p>
+                            <h3 class="card-title" data-offer-decision-label>Sem analise ainda</h3>
+                        </div>
+                        <span class="score-badge" data-offer-decision-score>--</span>
+                    </div>
+                    <p class="profile-copy" data-offer-decision-summary>
+                        Envie uma oferta acima para receber a decisao instantanea do motor.
+                    </p>
+                    <div class="chip-group" data-offer-decision-reasons>
+                        <span class="chip">score em tempo real</span>
+                        <span class="chip">risco de destino</span>
+                        <span class="chip">custo de embarque</span>
+                    </div>
+                </article>
+
+                <div class="list-stack" style="margin-top: 18px;">
+                    @foreach ($recentOfferEvaluations as $evaluation)
+                        <article class="feature-card">
+                            <div class="spread-row">
+                                <div>
+                                    <p class="metric-label">{{ $evaluation->evaluated_at?->format('d/m H:i') }}</p>
+                                    <h3 class="card-title">{{ match ($evaluation->recommendation) {
+                                        'vale_a_pena' => 'Vale a pena',
+                                        'nao_vale' => 'Nao vale',
+                                        'regiao_destino_ruim' => 'Regiao de destino ruim',
+                                        default => 'Risco alto',
+                                    } }}</h3>
+                                </div>
+                                <span class="score-badge">Score {{ $evaluation->decision_score }}</span>
+                            </div>
+                            <p class="profile-copy">
+                                {{ $evaluation->destination_zone_name ?: ($evaluation->matched_opportunity_zone ?: 'Destino nao identificado') }}
+                                • R$ {{ number_format((float) $evaluation->quoted_fare, 2, ',', '.') }}
+                            </p>
+                        </article>
+                    @endforeach
+                </div>
+            </section>
+        </div>
+
         <section class="panel" style="margin-top: 18px;">
             <div class="spread-row">
                 <div>
@@ -391,5 +497,78 @@
             "readyStatus": "Sua localizacao foi encontrada. As zonas abaixo foram ordenadas pela melhor combinacao de score, horario e proximidade.",
             "loadingStatus": "Solicitando sua localizacao para recalcular o radar em tempo real."
         }
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.querySelector('[data-offer-simulator]');
+
+            if (! form) {
+                return;
+            }
+
+            const badge = document.querySelector('[data-offer-decision-badge]');
+            const label = document.querySelector('[data-offer-decision-label]');
+            const score = document.querySelector('[data-offer-decision-score]');
+            const summary = document.querySelector('[data-offer-decision-summary]');
+            const reasons = document.querySelector('[data-offer-decision-reasons]');
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                badge.textContent = 'Analisando';
+                label.textContent = 'Motor calculando';
+                score.textContent = '...';
+                summary.textContent = 'Lendo valor, deslocamento, historico e risco de destino.';
+
+                const payload = Object.fromEntries(new FormData(form).entries());
+
+                Object.keys(payload).forEach((key) => {
+                    if (payload[key] === '') {
+                        delete payload[key];
+                    }
+                });
+
+                try {
+                    const response = await fetch(form.dataset.endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrf ?? '',
+                        },
+                        body: JSON.stringify(payload),
+                    });
+
+                    if (! response.ok) {
+                        throw new Error('Falha ao calcular a corrida.');
+                    }
+
+                    const result = await response.json();
+
+                    badge.textContent = result.recommendation_label;
+                    label.textContent = result.recommendation_label;
+                    score.textContent = `Score ${result.decision_score}`;
+                    summary.textContent =
+                        `${result.risk_level === 'low' ? 'Risco controlado' : 'Risco elevado'} • ` +
+                        `${result.destination_risk === 'high' ? 'destino ruim' : 'destino aceitavel'} • ` +
+                        `${result.projected_hourly_rate ? 'R$ ' + Number(result.projected_hourly_rate).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '/h' : 'sem taxa horaria projetada'}`;
+
+                    reasons.innerHTML = '';
+                    result.reasons.forEach((reason) => {
+                        const chip = document.createElement('span');
+                        chip.className = 'chip';
+                        chip.textContent = reason;
+                        reasons.appendChild(chip);
+                    });
+                } catch (error) {
+                    badge.textContent = 'Falha';
+                    label.textContent = 'Nao foi possivel analisar';
+                    score.textContent = '--';
+                    summary.textContent = 'O calculo falhou. Revise os campos e tente novamente.';
+                    reasons.innerHTML = '<span class="chip">erro de analise</span>';
+                }
+            });
+        });
     </script>
 </x-app-layout>

@@ -29,6 +29,7 @@ class ProfileController extends Controller
             'uberConnection' => $request->user()->uberConnection,
             'tripSummary' => $tripSummary,
             'subscription' => $request->user()->subscription?->loadMissing('charges'),
+            'mobileApiEndpoint' => route('api.mobile.offers.analyze'),
         ]);
     }
 

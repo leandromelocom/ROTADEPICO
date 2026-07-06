@@ -22,6 +22,12 @@
 
             <div class="profile-card">
                 <div class="max-w-xl">
+                    @include('profile.partials.mobile-api-card')
+                </div>
+            </div>
+
+            <div class="profile-card">
+                <div class="max-w-xl">
                     @include('profile.partials.update-profile-information-form')
                 </div>
             </div>

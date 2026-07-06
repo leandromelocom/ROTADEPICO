@@ -1,0 +1,84 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Opportunity;
+use App\Models\Subscription;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class MobileOfferApiTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_driver_can_generate_mobile_token_from_profile(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->post(route('profile.mobile-token'));
+
+        $response->assertRedirect(route('profile.edit'));
+        $response->assertSessionHas('mobile_api_token');
+
+        $this->assertNotNull($user->fresh()->mobile_api_token_hash);
+    }
+
+    public function test_mobile_api_accepts_bearer_token_and_parses_notification_text(): void
+    {
+        $plainToken = 'rtp_test_token_123';
+
+        $user = User::factory()->create([
+            'vehicle_type' => 'Carro',
+            'work_shift' => 'Noite',
+            'city' => 'Sao Paulo',
+            'onboarding_completed_at' => now(),
+            'mobile_api_token_hash' => hash('sha256', $plainToken),
+            'mobile_api_token_created_at' => now(),
+        ]);
+
+        Subscription::query()->create([
+            'user_id' => $user->id,
+            'plan_code' => 'mensal-pro',
+            'plan_name' => 'Plano Mensal Pro',
+            'status' => 'active',
+            'price_cents' => 3990,
+            'currency' => 'BRL',
+            'started_at' => now(),
+            'renews_at' => now()->addMonth(),
+        ]);
+
+        Opportunity::query()->create([
+            'city' => 'Sao Paulo',
+            'zone_name' => 'Zona Sul Premium',
+            'score' => 91,
+            'avg_fare' => 43.00,
+            'surge_label' => 'Alta',
+            'demand_level' => 'Alta',
+            'best_start_at' => '18:00',
+            'best_end_at' => '23:59',
+            'active_driver_ratio' => 0.34,
+            'pickup_hotspot' => 'Morumbi',
+            'tip' => 'Zona boa',
+            'trend' => 'subindo',
+            'route_profile' => 'premium',
+            'queue_pressure' => 20,
+            'preferred_vehicle_types' => ['Carro'],
+            'preferred_shifts' => ['Noite'],
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$plainToken)
+            ->postJson(route('api.mobile.offers.analyze'), [
+                'provider' => 'uber',
+                'source' => 'notification_listener',
+                'notification_text' => 'Uber R$ 48,90 embarque a 4 min a 1,2 km destino Zona Sul Premium 1,4x',
+            ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('recommendation', 'vale_a_pena');
+        $response->assertJsonPath('offer.quoted_fare', 48.9);
+        $response->assertJsonPath('offer.pickup_eta_minutes', 4);
+
+        $this->assertNotNull($user->fresh()->mobile_api_token_last_used_at);
+    }
+}

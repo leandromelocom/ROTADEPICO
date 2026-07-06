@@ -24,6 +24,11 @@ class DashboardController extends Controller
 
         $radarData = $radar->buildForUser(auth()->user(), $opportunities);
 
+        $radarData['recentOfferEvaluations'] = auth()->user()
+            ->rideOfferEvaluations()
+            ->take(3)
+            ->get();
+
         return view('dashboard', $radarData);
     }
 }
