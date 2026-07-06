@@ -20,4 +20,7 @@
     <string name="decision_channel_name">Decisoes do Rotadepico</string>
     <string name="overlay_default_title">Rota de Pico</string>
     <string name="overlay_default_message">Analise processada em tempo real.</string>
+    <string name="history_title">Historico local</string>
+    <string name="history_subtitle">Ultimas decisoes calculadas no aparelho para consulta rapida do motorista.</string>
+    <string name="history_empty">Assim que a primeira corrida for analisada, ela aparece aqui.</string>
 </resources>

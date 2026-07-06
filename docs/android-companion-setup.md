@@ -8,6 +8,7 @@ O projeto Android nativo foi iniciado em [android-companion](/home/administrator
 - envia o texto da oferta para o backend do Rotadepico
 - recebe `vale a pena`, `nao compensa` ou `destino ruim`
 - mostra overlay no topo da tela e heads-up notification
+- guarda historico local das ultimas decisoes no proprio aparelho
 
 ## Estrutura principal
 
@@ -47,7 +48,6 @@ Isso aparece no perfil do motorista em "Dispositivos conectados".
 
 ## Limites desta primeira versao
 
-- ainda nao existe tela de historico local
 - ainda nao existe assinatura de dispositivo no backend
 - ainda nao existe deduplicacao por `external_offer_id`
 - fallback visual ainda e simples

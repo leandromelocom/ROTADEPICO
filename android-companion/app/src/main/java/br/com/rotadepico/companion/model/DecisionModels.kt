@@ -42,3 +42,13 @@ data class PushNotificationPayload(
     val title: String,
     val body: String
 )
+
+data class DecisionHistoryEntry(
+    val happenedAt: String,
+    val recommendationLabel: String,
+    val headline: String,
+    val message: String,
+    val matchedZone: String?,
+    val decisionScore: Int,
+    val notificationText: String
+)

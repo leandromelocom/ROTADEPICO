@@ -7,6 +7,7 @@ import br.com.rotadepico.companion.model.OfferDecisionRequest
 import br.com.rotadepico.companion.network.DecisionApiClient
 import android.os.Build
 import br.com.rotadepico.companion.BuildConfig
+import br.com.rotadepico.companion.data.DecisionHistoryRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -70,6 +71,7 @@ class UberNotificationListenerService : NotificationListenerService() {
                 )
 
                 val decision = client.analyze(requestPayload)
+                DecisionHistoryRepository(applicationContext).saveDecision(text, decision)
                 DecisionOverlayPresenter(applicationContext).show(decision)
             }
         }

@@ -6,16 +6,23 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import br.com.rotadepico.companion.data.DecisionHistoryRepository
 import br.com.rotadepico.companion.data.SettingsRepository
+import br.com.rotadepico.companion.model.DecisionHistoryEntry
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var settingsRepository: SettingsRepository
+    private lateinit var historyRepository: DecisionHistoryRepository
 
     private val notificationsPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -26,6 +33,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         settingsRepository = SettingsRepository(this)
+        historyRepository = DecisionHistoryRepository(this)
 
         val apiBaseUrl = findViewById<EditText>(R.id.apiBaseUrlField)
         val bearerToken = findViewById<EditText>(R.id.bearerTokenField)
@@ -82,5 +90,52 @@ class MainActivity : AppCompatActivity() {
             if (settingsRepository.hasNotificationAccess()) getString(R.string.status_ready) else getString(R.string.status_pending)
         findViewById<TextView>(R.id.overlayStatusValue).text =
             if (Settings.canDrawOverlays(this)) getString(R.string.status_ready) else getString(R.string.status_pending)
+
+        renderHistory(historyRepository.loadHistory())
+    }
+
+    private fun renderHistory(entries: List<DecisionHistoryEntry>) {
+        val emptyState = findViewById<TextView>(R.id.historyEmptyState)
+        val container = findViewById<LinearLayout>(R.id.historyContainer)
+
+        container.removeAllViews()
+
+        if (entries.isEmpty()) {
+            emptyState.visibility = View.VISIBLE
+            return
+        }
+
+        emptyState.visibility = View.GONE
+
+        entries.forEach { entry ->
+            container.addView(buildHistoryCard(entry))
+        }
+    }
+
+    private fun buildHistoryCard(entry: DecisionHistoryEntry): View {
+        val card = layoutInflater.inflate(R.layout.history_item, null)
+
+        card.findViewById<TextView>(R.id.historyTime).text = formatTimestamp(entry.happenedAt)
+        card.findViewById<TextView>(R.id.historyHeadline).text = entry.headline
+        card.findViewById<TextView>(R.id.historyMeta).text = buildString {
+            append(entry.recommendationLabel)
+            append(" • Score ")
+            append(entry.decisionScore)
+            if (!entry.matchedZone.isNullOrBlank()) {
+                append(" • ")
+                append(entry.matchedZone)
+            }
+        }
+        card.findViewById<TextView>(R.id.historyMessage).text = entry.message
+
+        return card
+    }
+
+    private fun formatTimestamp(timestamp: String): String {
+        return runCatching {
+            OffsetDateTime.parse(timestamp).format(DateTimeFormatter.ofPattern("dd/MM HH:mm"))
+        }.getOrElse {
+            timestamp
+        }
     }
 }
