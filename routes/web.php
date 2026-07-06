@@ -25,6 +25,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/onboarding', [OnboardingController::class, 'show'])->name('onboarding.show');
     Route::post('/onboarding/profile', [OnboardingController::class, 'updateProfile'])->name('onboarding.profile');
     Route::post('/onboarding/location', [OnboardingController::class, 'activateLocation'])->name('onboarding.location');
+    Route::post('/onboarding/trial', [OnboardingController::class, 'startTrial'])->name('onboarding.trial');
     Route::post('/onboarding/subscription', [AsaasController::class, 'checkout'])->name('onboarding.subscription');
     Route::post('/onboarding/finish', [OnboardingController::class, 'finish'])->name('onboarding.finish');
     Route::post('/radar/location', [RadarLocationController::class, 'update'])->name('radar.location');

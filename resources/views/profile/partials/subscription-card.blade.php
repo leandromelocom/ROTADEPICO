@@ -15,9 +15,15 @@
             <div class="spread-row">
                 <div>
                     <p class="metric-label">{{ $subscription->plan_name }}</p>
-                    <h3 class="card-title">R$ {{ number_format($subscription->price_cents / 100, 2, ',', '.') }}/mes</h3>
+                    <h3 class="card-title">
+                        @if ($subscription->status === 'trialing')
+                            Trial gratis ativo
+                        @else
+                            R$ {{ number_format($subscription->price_cents / 100, 2, ',', '.') }}/mes
+                        @endif
+                    </h3>
                 </div>
-                <span class="state-badge {{ $subscription->status === 'active' ? 'up' : ($subscription->status === 'overdue' ? 'down' : 'flat') }}">
+                <span class="state-badge {{ in_array($subscription->status, ['active', 'trialing'], true) ? 'up' : ($subscription->status === 'overdue' ? 'down' : 'flat') }}">
                     {{ $subscription->status }}
                 </span>
             </div>
@@ -25,13 +31,21 @@
             <div class="detail-row">
                 <span>Gateway {{ strtoupper($subscription->provider ?? 'manual') }}</span>
                 <span class="sky">
-                    @if ($subscription->renews_at)
+                    @if ($subscription->status === 'trialing' && $subscription->trial_ends_at)
+                        Trial ate {{ $subscription->trial_ends_at->format('d/m/Y') }}
+                    @elseif ($subscription->renews_at)
                         Proxima referencia {{ $subscription->renews_at->format('d/m/Y') }}
                     @else
                         Sem proxima referencia definida
                     @endif
                 </span>
             </div>
+
+            @if ($subscription->status === 'trialing')
+                <p class="profile-copy" style="margin-top: 12px;">
+                    Seu acesso esta liberado pelo periodo promocional. Configure a cobranca recorrente antes do fim do trial para nao interromper o radar.
+                </p>
+            @endif
 
             @if ($subscription->isBlocked())
                 <p class="profile-copy" style="margin-top: 12px;">
@@ -109,7 +123,7 @@
         <article class="feature-card">
             <p class="metric-label">Plano Mensal Pro</p>
             <h3 class="card-title">Assinatura ainda nao iniciada</h3>
-            <p class="profile-copy">Gere o checkout da Asaas no onboarding para iniciar a recorrencia mensal.</p>
+            <p class="profile-copy">Ative os 7 dias gratis no onboarding e depois configure o checkout da Asaas para a recorrencia mensal.</p>
         </article>
     @endif
 </section>

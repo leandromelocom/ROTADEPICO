@@ -32,16 +32,17 @@ class AsaasController extends Controller
             [
                 'plan_code' => 'mensal-pro',
                 'plan_name' => 'Plano Mensal Pro',
-                'status' => 'pending',
+                'status' => $user->subscription?->status === 'trialing' ? 'trialing' : 'pending',
                 'price_cents' => 3990,
                 'currency' => 'BRL',
                 'provider' => 'asaas',
                 'provider_payment_link_id' => $checkout['payment_link_id'],
                 'checkout_url' => $checkout['checkout_url'],
                 'last_payment_status' => 'CHECKOUT_CREATED',
-                'meta' => [
+                'trial_ends_at' => $user->subscription?->trial_ends_at,
+                'meta' => array_merge($user->subscription?->meta ?? [], [
                     'checkout_response' => $checkout['raw'],
-                ],
+                ]),
             ]
         );
 

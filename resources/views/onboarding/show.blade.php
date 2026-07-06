@@ -66,8 +66,8 @@
                 <div class="spread-row">
                     <div>
                         <p class="metric-label">Etapa 2</p>
-                        <h2 class="section-title">Assinatura mensal</h2>
-                        <p class="section-copy">Plano unico recorrente para liberar o radar, mapa de regioes e sincronizacao com a Uber.</p>
+                        <h2 class="section-title">7 dias gratis + assinatura mensal</h2>
+                        <p class="section-copy">Liberamos o radar por 7 dias sem custo. Depois disso, a assinatura mensal mantem mapa de regioes e sincronizacao com a Uber.</p>
                     </div>
                     <span class="state-badge {{ $checklist['subscription'] ? 'up' : 'flat' }}">{{ $checklist['subscription'] ? 'ativa' : 'pendente' }}</span>
                 </div>
@@ -75,13 +75,26 @@
                 <article class="pricing-hero">
                     <div>
                         <p class="metric-label">Plano Mensal Pro</p>
+                        <h3 class="hero-price">7 dias<span> gratis</span></h3>
+                        <p class="profile-copy">Ative o teste agora, valide a inteligencia do radar no seu turno e so depois siga para a recorrencia de R$ 39,90/mes.</p>
+                    </div>
+                    <div class="chip-group">
+                        <span class="chip">Teste gratis</span>
+                        <span class="chip">Mapa de regioes</span>
+                        <span class="chip">Radar preditivo</span>
+                    </div>
+                </article>
+
+                <article class="pricing-hero" style="margin-top: 16px;">
+                    <div>
+                        <p class="metric-label">Recorrencia apos o trial</p>
                         <h3 class="hero-price">R$ 39,90<span>/mes</span></h3>
                         <p class="profile-copy">Checkout recorrente via Asaas, com pagamento hospedado e liberacao automatica quando a cobranca for confirmada.</p>
                     </div>
                     <div class="chip-group">
-                        <span class="chip">Mapa de regioes</span>
-                        <span class="chip">Radar preditivo</span>
                         <span class="chip">Conexao Uber</span>
+                        <span class="chip">Overlay mobile</span>
+                        <span class="chip">Asaas</span>
                     </div>
                 </article>
 
@@ -89,7 +102,9 @@
                     <div class="detail-row">
                         <span>Status {{ $subscription->status }}</span>
                         <span class="sky">
-                            @if ($subscription->renews_at)
+                            @if ($subscription->status === 'trialing' && $subscription->trial_ends_at)
+                                Trial termina em {{ $subscription->trial_ends_at->format('d/m/Y') }}
+                            @elseif ($subscription->renews_at)
                                 Renova em {{ $subscription->renews_at->format('d/m/Y') }}
                             @elseif ($subscription->provider === 'asaas')
                                 Aguardando confirmacao da Asaas
@@ -99,12 +114,20 @@
                 @endif
 
                 @unless ($checklist['subscription'])
-                    <form method="POST" action="{{ route('onboarding.subscription') }}" class="stack-actions">
+                    <form method="POST" action="{{ route('onboarding.trial') }}" class="stack-actions">
                         @csrf
-                        <x-primary-button>{{ $subscription?->status === 'pending' ? 'Gerar novo checkout Asaas' : 'Assinar com Asaas' }}</x-primary-button>
+                        <x-primary-button>Ativar 7 dias gratis</x-primary-button>
                     </form>
-                    <p class="profile-copy">O motorista faz o proprio pagamento no link seguro da Asaas. A assinatura fica pendente ate o webhook confirmar o recebimento.</p>
+                    <p class="profile-copy">O acesso ao radar abre imediatamente por 7 dias. A cobranca nao e feita nesse momento.</p>
                 @endunless
+
+                @if ($subscription?->status === 'trialing' || $checklist['subscription'])
+                    <form method="POST" action="{{ route('onboarding.subscription') }}" class="stack-actions" style="margin-top: 12px;">
+                        @csrf
+                        <x-primary-button>{{ $subscription?->provider_payment_link_id ? 'Gerar novo checkout Asaas' : 'Configurar cobranca apos trial' }}</x-primary-button>
+                    </form>
+                    <p class="profile-copy">Recomendado: ja deixe a cobranca preparada para nao perder acesso quando o trial terminar.</p>
+                @endif
             </section>
 
             <section class="panel">
@@ -155,7 +178,7 @@
                     <div>
                         <p class="metric-label">Finalizacao</p>
                         <h2 class="section-title">Entrar no radar</h2>
-                        <p class="section-copy">Quando perfil, localizacao e assinatura estiverem prontos, o motorista libera o acesso ao painel principal.</p>
+                        <p class="section-copy">Quando perfil, localizacao e trial ou assinatura estiverem prontos, o motorista libera o acesso ao painel principal.</p>
                     </div>
                     <span class="small-chip">{{ collect($checklist)->filter()->count() }}/4 itens</span>
                 </div>
