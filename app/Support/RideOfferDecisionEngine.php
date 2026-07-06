@@ -12,6 +12,10 @@ use Illuminate\Support\Str;
 
 class RideOfferDecisionEngine
 {
+    public function __construct(private readonly DriverDecisionPreferences $preferences)
+    {
+    }
+
     public function analyze(User $user, array $payload): array
     {
         $opportunities = Opportunity::query()->get();
@@ -23,6 +27,7 @@ class RideOfferDecisionEngine
 
         $matchedOpportunity = $this->matchDestinationOpportunity($payload, $opportunities);
         $historyMetrics = $this->buildHistoryMetrics($history, $opportunities);
+        $preferences = $this->preferences->forUser($user);
 
         $quotedFare = (float) ($payload['quoted_fare'] ?? 0);
         $pickupDistanceKm = $this->floatOrNull($payload['pickup_distance_km'] ?? null);
@@ -36,6 +41,7 @@ class RideOfferDecisionEngine
         $historyFitScore = $this->historyFitScore($quotedFare, $historyMetrics['avg_fare']);
         $surgeBoostScore = $this->surgeBoostScore($surgeMultiplier);
         $projectedHourlyRate = $this->projectedHourlyRate($quotedFare, $tripDistanceKm, $pickupEtaMinutes);
+        $offerPerKm = $this->offerPerKm($quotedFare, $tripDistanceKm, $pickupDistanceKm);
 
         $decisionScore = (int) round(
             ($fareEfficiencyScore * 0.34) +
@@ -50,13 +56,20 @@ class RideOfferDecisionEngine
         [$recommendation, $riskLevel] = $this->finalRecommendation(
             $decisionScore,
             $pickupBurdenScore,
-            $destinationContext['risk']
+            $destinationContext['risk'],
+            $quotedFare,
+            $offerPerKm,
+            $projectedHourlyRate,
+            $pickupDistanceKm,
+            $pickupEtaMinutes,
+            $preferences
         );
 
         $reasons = array_values(array_filter([
             $this->fareReason($quotedFare, $historyMetrics['avg_fare'], $fareEfficiencyScore),
             $this->pickupReason($pickupDistanceKm, $pickupEtaMinutes, $pickupBurdenScore),
             $this->destinationReason($matchedOpportunity, $destinationContext),
+            $this->preferenceReason($quotedFare, $offerPerKm, $projectedHourlyRate, $pickupDistanceKm, $pickupEtaMinutes, $preferences),
             $surgeMultiplier !== null ? 'Multiplicador dinâmico detectado na oferta.' : null,
             $projectedHourlyRate !== null ? 'Projeção operacional de R$ '.number_format($projectedHourlyRate, 2, ',', '.').'/h se a corrida fechar como lida.' : null,
         ]));
@@ -79,6 +92,7 @@ class RideOfferDecisionEngine
                 'history_fit_score' => $historyFitScore,
                 'surge_boost_score' => $surgeBoostScore,
             ],
+            'driver_preferences' => $preferences,
             'offer' => [
                 'quoted_fare' => $quotedFare > 0 ? round($quotedFare, 2) : null,
                 'pickup_distance_km' => $pickupDistanceKm,
@@ -114,6 +128,17 @@ class RideOfferDecisionEngine
         ]);
 
         return $result;
+    }
+
+    private function offerPerKm(float $quotedFare, ?float $tripDistanceKm, ?float $pickupDistanceKm): ?float
+    {
+        if ($quotedFare <= 0) {
+            return null;
+        }
+
+        $effectiveKm = max(1.0, ($tripDistanceKm ?? 0) + (($pickupDistanceKm ?? 0) * 0.55));
+
+        return round($quotedFare / $effectiveKm, 2);
     }
 
     private function matchDestinationOpportunity(array $payload, Collection $opportunities): ?Opportunity
@@ -261,10 +286,31 @@ class RideOfferDecisionEngine
         return (int) max(30, min(100, round($surgeMultiplier * 36)));
     }
 
-    private function finalRecommendation(int $decisionScore, int $pickupBurdenScore, string $destinationRisk): array
+    private function finalRecommendation(
+        int $decisionScore,
+        int $pickupBurdenScore,
+        string $destinationRisk,
+        float $quotedFare,
+        ?float $offerPerKm,
+        ?float $projectedHourlyRate,
+        ?float $pickupDistanceKm,
+        ?int $pickupEtaMinutes,
+        array $preferences
+    ): array
     {
         if ($destinationRisk === 'high' && $decisionScore < 68) {
             return ['regiao_destino_ruim', 'high'];
+        }
+
+        if (($pickupDistanceKm !== null && $pickupDistanceKm > $preferences['max_pickup_distance_km'])
+            || ($pickupEtaMinutes !== null && $pickupEtaMinutes > $preferences['max_pickup_eta_minutes'])) {
+            return ['nao_vale', 'high'];
+        }
+
+        if (($quotedFare > 0 && $quotedFare < $preferences['min_offer_fare'])
+            || ($offerPerKm !== null && $offerPerKm < $preferences['min_fare_per_km'])
+            || ($projectedHourlyRate !== null && $projectedHourlyRate < $preferences['min_hourly_rate'])) {
+            return ['nao_vale', $destinationRisk === 'low' ? 'medium' : 'high'];
         }
 
         if ($decisionScore >= 72 && $pickupBurdenScore >= 45 && $destinationRisk !== 'high') {
@@ -276,6 +322,34 @@ class RideOfferDecisionEngine
         }
 
         return ['risco_alto', $destinationRisk === 'low' ? 'medium' : 'high'];
+    }
+
+    private function preferenceReason(
+        float $quotedFare,
+        ?float $offerPerKm,
+        ?float $projectedHourlyRate,
+        ?float $pickupDistanceKm,
+        ?int $pickupEtaMinutes,
+        array $preferences
+    ): ?string {
+        if ($quotedFare > 0 && $quotedFare < $preferences['min_offer_fare']) {
+            return 'A oferta ficou abaixo do valor minimo que voce definiu para hoje.';
+        }
+
+        if ($offerPerKm !== null && $offerPerKm < $preferences['min_fare_per_km']) {
+            return 'O ganho por km ficou abaixo da sua meta configurada.';
+        }
+
+        if ($projectedHourlyRate !== null && $projectedHourlyRate < $preferences['min_hourly_rate']) {
+            return 'A projeção por hora nao atingiu a sua meta operacional.';
+        }
+
+        if (($pickupDistanceKm !== null && $pickupDistanceKm > $preferences['max_pickup_distance_km'])
+            || ($pickupEtaMinutes !== null && $pickupEtaMinutes > $preferences['max_pickup_eta_minutes'])) {
+            return 'O embarque passou do limite maximo que voce aceitou configurar.';
+        }
+
+        return 'A corrida respeita a sua regua pessoal configurada no perfil.';
     }
 
     private function recommendationLabel(string $recommendation): string

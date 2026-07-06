@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Http\Requests\DecisionSettingsUpdateRequest;
+use App\Support\DriverDecisionPreferences;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,6 +28,7 @@ class ProfileController extends Controller
 
         return view('profile.edit', [
             'user' => $request->user(),
+            'decisionSettings' => app(DriverDecisionPreferences::class)->forUser($request->user()),
             'uberConnection' => $request->user()->uberConnection,
             'tripSummary' => $tripSummary,
             'subscription' => $request->user()->subscription?->loadMissing('charges'),
@@ -49,6 +52,13 @@ class ProfileController extends Controller
         $request->user()->save();
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
+    }
+
+    public function updateDecisionSettings(DecisionSettingsUpdateRequest $request): RedirectResponse
+    {
+        $request->user()->fill($request->validated())->save();
+
+        return Redirect::route('profile.edit')->with('decision_settings_status', 'preferencias-operacionais-atualizadas');
     }
 
     /**

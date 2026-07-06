@@ -175,4 +175,65 @@ class RideOfferDecisionTest extends TestCase
         $response->assertJsonPath('offer.pickup_eta_minutes', 4);
         $response->assertJsonPath('matched_zone', 'Zona Sul Premium');
     }
+
+    public function test_driver_preferences_can_reject_offer_below_personal_threshold(): void
+    {
+        $user = User::factory()->create([
+            'vehicle_type' => 'Carro',
+            'work_shift' => 'Noite',
+            'city' => 'Sao Paulo',
+            'onboarding_completed_at' => now(),
+            'decision_profile' => 'premium',
+            'min_offer_fare' => 60.00,
+            'min_fare_per_km' => 4.00,
+            'min_hourly_rate' => 70.00,
+            'max_pickup_distance_km' => 2.00,
+            'max_pickup_eta_minutes' => 5,
+        ]);
+
+        Subscription::query()->create([
+            'user_id' => $user->id,
+            'plan_code' => 'mensal-pro',
+            'plan_name' => 'Plano Mensal Pro',
+            'status' => 'active',
+            'price_cents' => 3990,
+            'currency' => 'BRL',
+            'started_at' => now(),
+            'renews_at' => now()->addMonth(),
+        ]);
+
+        Opportunity::query()->create([
+            'city' => 'Sao Paulo',
+            'zone_name' => 'Zona Sul Premium',
+            'score' => 90,
+            'avg_fare' => 40.00,
+            'surge_label' => 'Alta',
+            'demand_level' => 'Alta',
+            'best_start_at' => '18:00',
+            'best_end_at' => '23:59',
+            'active_driver_ratio' => 0.33,
+            'pickup_hotspot' => 'Zona Sul',
+            'tip' => 'Boa area',
+            'trend' => 'subindo',
+            'route_profile' => 'premium',
+            'queue_pressure' => 18,
+            'preferred_vehicle_types' => ['Carro'],
+            'preferred_shifts' => ['Noite'],
+        ]);
+
+        $response = $this->actingAs($user)->postJson(route('radar.offer-decision'), [
+            'provider' => 'uber',
+            'source' => 'notification',
+            'quoted_fare' => 48.90,
+            'pickup_distance_km' => 1.2,
+            'trip_distance_km' => 9.4,
+            'pickup_eta_minutes' => 4,
+            'surge_multiplier' => 1.4,
+            'destination_zone_name' => 'Zona Sul Premium',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('recommendation', 'nao_vale');
+        $response->assertJsonPath('driver_preferences.decision_profile', 'premium');
+    }
 }

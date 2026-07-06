@@ -48,6 +48,10 @@
                         <div class="metric-label">Hora util</div>
                         <div class="metric-value" data-live-hourly>R$ {{ number_format($bestNow['expected_hourly'], 2, ',', '.') }}</div>
                     </article>
+                    <article class="metric-card">
+                        <div class="metric-label">Sua regua hoje</div>
+                        <div class="metric-value">{{ $decisionSettings['decision_profile_label'] }}</div>
+                    </article>
                 </div>
 
                 <div class="panel-split">

@@ -96,4 +96,33 @@ class ProfileTest extends TestCase
 
         $this->assertNotNull($user->fresh());
     }
+
+    public function test_user_can_update_their_decision_settings(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->patch('/profile/decision-settings', [
+                'decision_profile' => 'premium',
+                'min_offer_fare' => 35.00,
+                'min_fare_per_km' => 3.80,
+                'min_hourly_rate' => 52.00,
+                'max_pickup_distance_km' => 2.20,
+                'max_pickup_eta_minutes' => 5,
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/profile');
+
+        $user->refresh();
+
+        $this->assertSame('premium', $user->decision_profile);
+        $this->assertSame(35.0, $user->min_offer_fare);
+        $this->assertSame(3.8, $user->min_fare_per_km);
+        $this->assertSame(52.0, $user->min_hourly_rate);
+        $this->assertSame(2.2, $user->max_pickup_distance_km);
+        $this->assertSame(5, $user->max_pickup_eta_minutes);
+    }
 }
