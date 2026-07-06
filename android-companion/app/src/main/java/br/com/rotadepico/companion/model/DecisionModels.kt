@@ -3,11 +3,14 @@ package br.com.rotadepico.companion.model
 data class OfferDecisionRequest(
     val provider: String,
     val source: String,
+    val platform: String,
     val packageName: String,
     val notificationTitle: String?,
     val notificationText: String,
     val notificationReceivedAt: String,
-    val deviceId: String
+    val deviceId: String,
+    val deviceLabel: String?,
+    val appVersion: String
 )
 
 data class OfferDecisionResponse(

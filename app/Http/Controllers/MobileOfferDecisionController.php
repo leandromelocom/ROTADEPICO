@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\RideOfferDecisionEngine;
+use App\Support\MobileDeviceRegistry;
 use App\Support\MobileDecisionPayloadFactory;
 use App\Support\UberNotificationParser;
 use Illuminate\Http\JsonResponse;
@@ -14,7 +15,8 @@ class MobileOfferDecisionController extends Controller
         Request $request,
         RideOfferDecisionEngine $engine,
         UberNotificationParser $parser,
-        MobileDecisionPayloadFactory $payloadFactory
+        MobileDecisionPayloadFactory $payloadFactory,
+        MobileDeviceRegistry $deviceRegistry
     ): JsonResponse {
         $user = $request->user();
 
@@ -26,6 +28,9 @@ class MobileOfferDecisionController extends Controller
             'source' => ['nullable', 'string', 'max:40'],
             'external_offer_id' => ['nullable', 'string', 'max:120'],
             'device_id' => ['nullable', 'string', 'max:120'],
+            'device_label' => ['nullable', 'string', 'max:120'],
+            'platform' => ['nullable', 'string', 'max:30'],
+            'app_version' => ['nullable', 'string', 'max:40'],
             'package_name' => ['nullable', 'string', 'max:160'],
             'notification_title' => ['nullable', 'string', 'max:160'],
             'notification_received_at' => ['nullable', 'date'],
@@ -51,6 +56,7 @@ class MobileOfferDecisionController extends Controller
         }
 
         $analysis = $engine->analyze($user, $validated);
+        $device = $deviceRegistry->register($user, $validated);
 
         return response()->json(array_merge(
             $analysis,
@@ -61,7 +67,15 @@ class MobileOfferDecisionController extends Controller
                     'source' => (string) ($validated['source'] ?? 'notification_listener'),
                     'package_name' => $validated['package_name'] ?? null,
                     'device_id' => $validated['device_id'] ?? null,
+                    'device_label' => $validated['device_label'] ?? null,
+                    'app_version' => $validated['app_version'] ?? null,
                     'received_at' => now()->toIso8601String(),
+                ],
+                'device' => [
+                    'registered' => $device !== null,
+                    'id' => $device?->device_id,
+                    'platform' => $device?->platform,
+                    'last_seen_at' => $device?->last_seen_at?->toIso8601String(),
                 ],
             ]
         ));

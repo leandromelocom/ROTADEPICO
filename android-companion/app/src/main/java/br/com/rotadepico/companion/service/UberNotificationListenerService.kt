@@ -5,6 +5,8 @@ import android.service.notification.StatusBarNotification
 import br.com.rotadepico.companion.data.SettingsRepository
 import br.com.rotadepico.companion.model.OfferDecisionRequest
 import br.com.rotadepico.companion.network.DecisionApiClient
+import android.os.Build
+import br.com.rotadepico.companion.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -50,11 +52,14 @@ class UberNotificationListenerService : NotificationListenerService() {
         val requestPayload = OfferDecisionRequest(
             provider = "uber",
             source = "notification_listener",
+            platform = "android",
             packageName = sbn.packageName,
             notificationTitle = title,
             notificationText = text,
             notificationReceivedAt = OffsetDateTime.now().toString(),
-            deviceId = settings.deviceId()
+            deviceId = settings.deviceId(),
+            deviceLabel = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
+            appVersion = BuildConfig.VERSION_NAME
         )
 
         scope.launch {

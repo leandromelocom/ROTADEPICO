@@ -32,6 +32,19 @@ O projeto Android nativo foi iniciado em [android-companion](/home/administrator
 5. Cole o token no app companion.
 6. Libere acesso a notificacoes e overlay.
 
+## Registro automatico do aparelho
+
+Na primeira oferta enviada pelo listener, o backend registra automaticamente:
+
+- `device_id`
+- `device_label`
+- `platform`
+- `package_name`
+- `app_version`
+- ultimo horario de atividade
+
+Isso aparece no perfil do motorista em "Dispositivos conectados".
+
 ## Limites desta primeira versao
 
 - ainda nao existe tela de historico local

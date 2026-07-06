@@ -132,10 +132,13 @@ class MobileOfferApiTest extends TestCase
             ->postJson(route('api.mobile.listener.uber-offers.decision'), [
                 'provider' => 'uber',
                 'source' => 'notification_listener',
+                'platform' => 'android',
                 'package_name' => 'com.ubercab.driver',
                 'notification_title' => 'Uber',
                 'notification_text' => 'Uber: R$ 48,90, embarque a 4 min, a 1,2 km, destino Zona Sul Premium, 1,4x',
                 'device_id' => 'pixel-7-leandro',
+                'device_label' => 'Pixel 7 do Leandro',
+                'app_version' => '0.1.0',
                 'notification_received_at' => now()->toIso8601String(),
             ]);
 
@@ -143,6 +146,9 @@ class MobileOfferApiTest extends TestCase
         $response->assertJsonPath('listener_contract_version', 1);
         $response->assertJsonPath('listener.package_name', 'com.ubercab.driver');
         $response->assertJsonPath('listener.device_id', 'pixel-7-leandro');
+        $response->assertJsonPath('device.registered', true);
+        $response->assertJsonPath('device.id', 'pixel-7-leandro');
+        $response->assertJsonPath('device.platform', 'android');
         $response->assertJsonPath('overlay.headline', 'Aceite rapido');
         $response->assertJsonPath('overlay.label', 'Vale a pena');
         $response->assertJson(fn ($json) => $json
@@ -151,5 +157,14 @@ class MobileOfferApiTest extends TestCase
             ->where('overlay.tone', 'positive')
             ->etc()
         );
+
+        $this->assertDatabaseHas('mobile_devices', [
+            'user_id' => $user->id,
+            'device_id' => 'pixel-7-leandro',
+            'device_label' => 'Pixel 7 do Leandro',
+            'platform' => 'android',
+            'package_name' => 'com.ubercab.driver',
+            'app_version' => '0.1.0',
+        ]);
     }
 }

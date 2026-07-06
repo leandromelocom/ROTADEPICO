@@ -56,6 +56,27 @@
         </div>
     </article>
 
+    <article class="feature-card">
+        <div class="spread-row">
+            <div>
+                <p class="metric-label">Dispositivos conectados</p>
+                <h3 class="card-title">{{ $mobileDevices->count() }} ativo(s) recente(s)</h3>
+            </div>
+            <span class="score-badge">{{ $mobileDevices->isEmpty() ? 'Sem listener' : 'Mapeados' }}</span>
+        </div>
+
+        @forelse ($mobileDevices as $device)
+            <div class="detail-row">
+                <span>{{ $device->device_label ?: $device->device_id }}</span>
+                <span class="sky">{{ $device->last_seen_at?->format('d/m/Y H:i') ?? 'Nunca' }}</span>
+            </div>
+        @empty
+            <p class="profile-copy" style="margin-top: 16px;">
+                Assim que o app Android enviar a primeira notificacao da Uber, o aparelho aparece aqui automaticamente.
+            </p>
+        @endforelse
+    </article>
+
     <div class="stack-actions">
         <form method="POST" action="{{ route('profile.mobile-token') }}">
             @csrf

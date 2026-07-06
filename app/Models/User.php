@@ -70,6 +70,11 @@ class User extends Authenticatable
         return $this->hasMany(RideOfferEvaluation::class)->latest('evaluated_at')->latest('id');
     }
 
+    public function mobileDevices(): HasMany
+    {
+        return $this->hasMany(MobileDevice::class)->latest('last_seen_at')->latest('id');
+    }
+
     public function subscription(): HasOne
     {
         return $this->hasOne(Subscription::class);

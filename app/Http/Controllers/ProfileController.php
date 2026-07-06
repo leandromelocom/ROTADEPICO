@@ -31,6 +31,7 @@ class ProfileController extends Controller
             'subscription' => $request->user()->subscription?->loadMissing('charges'),
             'mobileApiEndpoint' => route('api.mobile.offers.analyze'),
             'mobileListenerEndpoint' => route('api.mobile.listener.uber-offers.decision'),
+            'mobileDevices' => $request->user()->mobileDevices()->take(5)->get(),
         ]);
     }
 
