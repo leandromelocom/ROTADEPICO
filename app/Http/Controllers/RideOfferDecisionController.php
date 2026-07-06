@@ -3,12 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Support\RideOfferDecisionEngine;
+use App\Support\UberNotificationParser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class RideOfferDecisionController extends Controller
 {
-    public function __invoke(Request $request, RideOfferDecisionEngine $engine): JsonResponse
+    public function __invoke(
+        Request $request,
+        RideOfferDecisionEngine $engine,
+        UberNotificationParser $parser
+    ): JsonResponse
     {
         $user = $request->user();
 
@@ -32,10 +37,12 @@ class RideOfferDecisionController extends Controller
             'raw_payload' => ['nullable', 'array'],
         ]);
 
-        if (isset($validated['notification_text']) && ! isset($validated['raw_payload'])) {
-            $validated['raw_payload'] = [
-                'notification_text' => $validated['notification_text'],
-            ];
+        if (! empty($validated['notification_text'])) {
+            $validated = array_merge($parser->parse($validated['notification_text']), $validated);
+        }
+
+        if (! isset($validated['raw_payload'])) {
+            $validated['raw_payload'] = $request->all();
         }
 
         return response()->json($engine->analyze($user, $validated));

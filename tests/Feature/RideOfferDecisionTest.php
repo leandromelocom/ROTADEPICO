@@ -126,4 +126,53 @@ class RideOfferDecisionTest extends TestCase
         $response->assertJsonPath('recommendation', 'regiao_destino_ruim');
         $response->assertJsonPath('destination_risk', 'high');
     }
+
+    public function test_driver_can_analyze_offer_from_notification_text_only(): void
+    {
+        $user = User::factory()->create([
+            'vehicle_type' => 'Carro',
+            'work_shift' => 'Noite',
+            'city' => 'Sao Paulo',
+            'onboarding_completed_at' => now(),
+        ]);
+
+        Subscription::query()->create([
+            'user_id' => $user->id,
+            'plan_code' => 'mensal-pro',
+            'plan_name' => 'Plano Mensal Pro',
+            'status' => 'active',
+            'price_cents' => 3990,
+            'currency' => 'BRL',
+            'started_at' => now(),
+            'renews_at' => now()->addMonth(),
+        ]);
+
+        Opportunity::query()->create([
+            'city' => 'Sao Paulo',
+            'zone_name' => 'Zona Sul Premium',
+            'score' => 90,
+            'avg_fare' => 40.00,
+            'surge_label' => 'Alta',
+            'demand_level' => 'Alta',
+            'best_start_at' => '18:00',
+            'best_end_at' => '23:59',
+            'active_driver_ratio' => 0.33,
+            'pickup_hotspot' => 'Zona Sul',
+            'tip' => 'Boa area',
+            'trend' => 'subindo',
+            'route_profile' => 'premium',
+            'queue_pressure' => 18,
+            'preferred_vehicle_types' => ['Carro'],
+            'preferred_shifts' => ['Noite'],
+        ]);
+
+        $response = $this->actingAs($user)->postJson(route('radar.offer-decision'), [
+            'notification_text' => 'Uber: R$ 48,90, embarque a 4 min, a 1,2 km, destino Zona Sul Premium, 1,4x',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('offer.quoted_fare', 48.9);
+        $response->assertJsonPath('offer.pickup_eta_minutes', 4);
+        $response->assertJsonPath('matched_zone', 'Zona Sul Premium');
+    }
 }
