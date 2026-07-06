@@ -16,6 +16,12 @@ import androidx.appcompat.app.AppCompatActivity
 import br.com.rotadepico.companion.data.DecisionHistoryRepository
 import br.com.rotadepico.companion.data.SettingsRepository
 import br.com.rotadepico.companion.model.DecisionHistoryEntry
+import br.com.rotadepico.companion.network.AuthApiClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
@@ -23,6 +29,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var historyRepository: DecisionHistoryRepository
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val notificationsPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -36,8 +43,11 @@ class MainActivity : AppCompatActivity() {
         historyRepository = DecisionHistoryRepository(this)
 
         val apiBaseUrl = findViewById<EditText>(R.id.apiBaseUrlField)
+        val loginEmail = findViewById<EditText>(R.id.loginEmailField)
+        val loginPassword = findViewById<EditText>(R.id.loginPasswordField)
         val bearerToken = findViewById<EditText>(R.id.bearerTokenField)
         val deviceId = findViewById<EditText>(R.id.deviceIdField)
+        val loginButton = findViewById<Button>(R.id.loginButton)
         val saveButton = findViewById<Button>(R.id.saveSettingsButton)
         val notificationAccessButton = findViewById<Button>(R.id.notificationAccessButton)
         val overlayAccessButton = findViewById<Button>(R.id.overlayAccessButton)
@@ -46,6 +56,38 @@ class MainActivity : AppCompatActivity() {
         apiBaseUrl.setText(settingsRepository.apiBaseUrl())
         bearerToken.setText(settingsRepository.bearerToken())
         deviceId.setText(settingsRepository.deviceId())
+        loginEmail.setText(settingsRepository.userEmail())
+
+        loginButton.setOnClickListener {
+            findViewById<TextView>(R.id.authStatusValue).text = getString(R.string.auth_status_loading)
+
+            scope.launch {
+                runCatching {
+                    withContext(Dispatchers.IO) {
+                        AuthApiClient(apiBaseUrl.text.toString().ifBlank { settingsRepository.apiBaseUrl() })
+                            .login(
+                                email = loginEmail.text.toString(),
+                                password = loginPassword.text.toString()
+                            )
+                    }
+                }.onSuccess { auth ->
+                    settingsRepository.saveAuthSession(
+                        apiBaseUrl = apiBaseUrl.text.toString().ifBlank { settingsRepository.apiBaseUrl() },
+                        bearerToken = auth.token,
+                        deviceId = deviceId.text.toString().ifBlank { settingsRepository.deviceId() },
+                        userName = auth.user.name,
+                        userEmail = auth.user.email
+                    )
+
+                    bearerToken.setText(auth.token)
+                    findViewById<TextView>(R.id.authStatusValue).text =
+                        getString(R.string.auth_status_ready, auth.user.name)
+                    updateStatus()
+                }.onFailure {
+                    findViewById<TextView>(R.id.authStatusValue).text = getString(R.string.auth_status_error)
+                }
+            }
+        }
 
         saveButton.setOnClickListener {
             settingsRepository.save(
@@ -84,6 +126,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateStatus() {
         findViewById<TextView>(R.id.endpointStatusValue).text = settingsRepository.apiBaseUrl()
+        findViewById<TextView>(R.id.authStatusValue).text =
+            if (settingsRepository.userName().isBlank()) getString(R.string.status_pending)
+            else getString(R.string.auth_status_ready, settingsRepository.userName())
         findViewById<TextView>(R.id.tokenStatusValue).text =
             if (settingsRepository.bearerToken().isBlank()) getString(R.string.status_pending) else getString(R.string.status_ready)
         findViewById<TextView>(R.id.listenerStatusValue).text =

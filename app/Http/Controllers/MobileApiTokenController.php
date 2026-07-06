@@ -2,21 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\MobileApiTokenIssuer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class MobileApiTokenController extends Controller
 {
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, MobileApiTokenIssuer $issuer): RedirectResponse
     {
-        $plainToken = 'rtp_'.Str::random(48);
-
-        $request->user()->forceFill([
-            'mobile_api_token_hash' => hash('sha256', $plainToken),
-            'mobile_api_token_created_at' => now(),
-            'mobile_api_token_last_used_at' => null,
-        ])->save();
+        $plainToken = $issuer->issue($request->user());
 
         return redirect()
             ->route('profile.edit')
