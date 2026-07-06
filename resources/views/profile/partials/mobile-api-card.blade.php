@@ -27,6 +27,10 @@
             <span>Ultimo uso</span>
             <span class="sky">{{ $user->mobile_api_token_last_used_at?->format('d/m/Y H:i') ?? 'Nunca' }}</span>
         </div>
+        <div class="detail-row">
+            <span>Listener Android</span>
+            <span class="sky">{{ $mobileListenerEndpoint }}</span>
+        </div>
     </article>
 
     @if (session('mobile_api_token'))
@@ -38,6 +42,19 @@
             </p>
         </article>
     @endif
+
+    <article class="feature-card">
+        <p class="metric-label">Fluxo automatico</p>
+        <h3 class="card-title">Notificacao Uber -> decisao Rotadepico</h3>
+        <p class="profile-copy">
+            O app Android companion deve escutar a notificacao da Uber, enviar o texto bruto para <strong>{{ $mobileListenerEndpoint }}</strong> e mostrar o overlay com a resposta.
+        </p>
+        <div class="chip-group" style="margin-top: 18px;">
+            <span class="small-chip">listener nativo</span>
+            <span class="small-chip">overlay instantaneo</span>
+            <span class="small-chip">bearer token</span>
+        </div>
+    </article>
 
     <div class="stack-actions">
         <form method="POST" action="{{ route('profile.mobile-token') }}">

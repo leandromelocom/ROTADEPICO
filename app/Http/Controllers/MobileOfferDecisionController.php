@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\RideOfferDecisionEngine;
+use App\Support\MobileDecisionPayloadFactory;
 use App\Support\UberNotificationParser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,7 +13,8 @@ class MobileOfferDecisionController extends Controller
     public function __invoke(
         Request $request,
         RideOfferDecisionEngine $engine,
-        UberNotificationParser $parser
+        UberNotificationParser $parser,
+        MobileDecisionPayloadFactory $payloadFactory
     ): JsonResponse {
         $user = $request->user();
 
@@ -23,6 +25,10 @@ class MobileOfferDecisionController extends Controller
             'provider' => ['nullable', 'string', 'max:40'],
             'source' => ['nullable', 'string', 'max:40'],
             'external_offer_id' => ['nullable', 'string', 'max:120'],
+            'device_id' => ['nullable', 'string', 'max:120'],
+            'package_name' => ['nullable', 'string', 'max:160'],
+            'notification_title' => ['nullable', 'string', 'max:160'],
+            'notification_received_at' => ['nullable', 'date'],
             'quoted_fare' => ['nullable', 'numeric', 'min:0'],
             'currency_code' => ['nullable', 'string', 'max:8'],
             'pickup_distance_km' => ['nullable', 'numeric', 'min:0', 'max:100'],
@@ -44,6 +50,20 @@ class MobileOfferDecisionController extends Controller
             $validated['raw_payload'] = $request->all();
         }
 
-        return response()->json($engine->analyze($user, $validated));
+        $analysis = $engine->analyze($user, $validated);
+
+        return response()->json(array_merge(
+            $analysis,
+            $payloadFactory->build($analysis),
+            [
+                'listener' => [
+                    'provider' => (string) ($validated['provider'] ?? 'uber'),
+                    'source' => (string) ($validated['source'] ?? 'notification_listener'),
+                    'package_name' => $validated['package_name'] ?? null,
+                    'device_id' => $validated['device_id'] ?? null,
+                    'received_at' => now()->toIso8601String(),
+                ],
+            ]
+        ));
     }
 }
