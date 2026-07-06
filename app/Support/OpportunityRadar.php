@@ -35,7 +35,7 @@ class OpportunityRadar
 
     private function buildPayload(User $user, Collection $opportunities, Collection $scored, ?float $latitude = null, ?float $longitude = null): array
     {
-        $bestNow = $scored->first();
+        $bestNow = $scored->first() ?? $this->emptyBestNow();
         $peakWindows = $scored->sortByDesc('expected_hourly')->take(3)->values();
         $heatZones = $scored->take(4)->values();
         $nextMoves = $scored->take(3)->map(function (array $zone, int $index) {
@@ -131,9 +131,44 @@ class OpportunityRadar
                 'best_score' => $bestNow['predicted_score'] ?? 0,
                 'zones_online' => $opportunities->count(),
                 'fit_average' => round($scored->avg('fit_score') ?? 0),
-                'closest_best_distance_km' => $bestNow['distance_km'] !== null ? round($bestNow['distance_km'], 1) : null,
+                'closest_best_distance_km' => $bestNow['distance_km'] !== null ? round((float) $bestNow['distance_km'], 1) : null,
                 'localized_mode' => $latitude !== null && $longitude !== null,
             ],
+        ];
+    }
+
+    private function emptyBestNow(): array
+    {
+        return [
+            'zone_name' => 'Sem zonas cadastradas',
+            'predicted_score' => 0,
+            'localized_priority' => 0,
+            'fit_score' => 0,
+            'avg_fare' => 0.0,
+            'best_window' => '--',
+            'active_driver_ratio' => 0.0,
+            'latitude' => null,
+            'longitude' => null,
+            'distance_km' => null,
+            'surge_label' => 'Sem leitura',
+            'demand_level' => 'Sem leitura',
+            'pickup_hotspot' => 'Cadastre oportunidades para liberar o radar.',
+            'tip' => 'Ainda nao existem regioes quentes cadastradas para esta base.',
+            'trend' => 'estavel',
+            'route_profile' => 'aguardando-configuracao',
+            'queue_pressure' => 0,
+            'pay_label' => 'Aguardando',
+            'hotspot_radius_m' => 0,
+            'pay_intensity' => 0,
+            'vehicle_match' => false,
+            'shift_match' => false,
+            'window_hot' => false,
+            'timing_score' => 0,
+            'expected_hourly' => 0.0,
+            'recommendation' => 'Cadastre as primeiras zonas operacionais para o radar começar a recomendar deslocamento.',
+            'comparison_reason' => 'Sem zonas disponiveis para comparar no momento.',
+            'signals' => ['base sem oportunidades'],
+            'preferred_shifts' => [],
         ];
     }
 

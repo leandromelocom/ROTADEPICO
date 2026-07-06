@@ -159,4 +159,32 @@ class DashboardRadarTest extends TestCase
 
         $this->assertNotNull($user->fresh()->last_location_reported_at);
     }
+
+    public function test_dashboard_still_renders_when_there_are_no_opportunities(): void
+    {
+        $user = User::factory()->create([
+            'phone' => '(11) 99999-0000',
+            'vehicle_type' => 'Carro',
+            'work_shift' => 'Noite',
+            'city' => 'Sao Paulo',
+            'location_permission_granted_at' => now(),
+            'onboarding_completed_at' => now(),
+        ]);
+
+        Subscription::query()->create([
+            'user_id' => $user->id,
+            'plan_code' => 'mensal-pro',
+            'plan_name' => 'Plano Mensal Pro',
+            'status' => 'active',
+            'price_cents' => 3990,
+            'currency' => 'BRL',
+            'started_at' => now(),
+            'renews_at' => now()->addMonth(),
+        ]);
+
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        $response->assertOk();
+        $response->assertSee('Sem zonas cadastradas');
+    }
 }
