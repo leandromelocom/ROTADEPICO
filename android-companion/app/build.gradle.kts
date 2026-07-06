@@ -7,6 +7,10 @@ android {
     namespace = "br.com.rotadepico.companion"
     compileSdk = 34
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "br.com.rotadepico.companion"
         minSdk = 26
