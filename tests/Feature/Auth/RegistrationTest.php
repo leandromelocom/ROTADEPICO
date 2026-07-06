@@ -22,6 +22,7 @@ class RegistrationTest extends TestCase
             'name' => 'Test User',
             'email' => 'test@example.com',
             'phone' => '(11) 99999-9999',
+            'state' => 'SP',
             'city' => 'Sao Paulo',
             'vehicle_type' => 'Carro',
             'work_shift' => 'Noite',

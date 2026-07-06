@@ -24,16 +24,17 @@
 
                 <form method="POST" action="{{ route('onboarding.profile') }}">
                     @csrf
-                    <div class="field-grid">
-                        <div class="field">
-                            <x-input-label for="phone" value="WhatsApp" />
-                            <x-text-input id="phone" name="phone" type="text" :value="old('phone', $user->phone)" required />
-                        </div>
-                        <div class="field">
-                            <x-input-label for="city" value="Cidade" />
-                            <x-text-input id="city" name="city" type="text" :value="old('city', $user->city)" required />
-                        </div>
+                    <div class="field">
+                        <x-input-label for="phone" value="WhatsApp" />
+                        <x-text-input id="phone" name="phone" type="text" :value="old('phone', $user->phone)" required />
                     </div>
+
+                    @include('partials.brazil-city-select', [
+                        'brazilStates' => $brazilStates,
+                        'inputIdPrefix' => 'onboarding',
+                        'selectedState' => $selectedState,
+                        'selectedCity' => old('city', $user->city),
+                    ])
 
                     <div class="field-grid">
                         <div class="field">

@@ -26,21 +26,21 @@
             <x-input-error :messages="$errors->get('phone')" />
         </div>
 
-        <div class="field-grid">
-            <div class="field">
-                <x-input-label for="city" value="Cidade" />
-                <x-text-input id="city" type="text" name="city" :value="old('city', 'Sao Paulo')" required />
-                <x-input-error :messages="$errors->get('city')" />
-            </div>
-            <div class="field">
-                <x-input-label for="vehicle_type" value="Veiculo" />
-                <select id="vehicle_type" name="vehicle_type" class="field-control" required>
-                    <option value="Carro" @selected(old('vehicle_type') === 'Carro')>Carro</option>
-                    <option value="Moto" @selected(old('vehicle_type') === 'Moto')>Moto</option>
-                    <option value="SUV" @selected(old('vehicle_type') === 'SUV')>SUV</option>
-                </select>
-                <x-input-error :messages="$errors->get('vehicle_type')" />
-            </div>
+        @include('partials.brazil-city-select', [
+            'brazilStates' => $brazilStates,
+            'inputIdPrefix' => 'register',
+            'selectedState' => old('state', 'SP'),
+            'selectedCity' => old('city', 'São Paulo'),
+        ])
+
+        <div class="field">
+            <x-input-label for="vehicle_type" value="Veiculo" />
+            <select id="vehicle_type" name="vehicle_type" class="field-control" required>
+                <option value="Carro" @selected(old('vehicle_type') === 'Carro')>Carro</option>
+                <option value="Moto" @selected(old('vehicle_type') === 'Moto')>Moto</option>
+                <option value="SUV" @selected(old('vehicle_type') === 'SUV')>SUV</option>
+            </select>
+            <x-input-error :messages="$errors->get('vehicle_type')" />
         </div>
 
         <div class="field">

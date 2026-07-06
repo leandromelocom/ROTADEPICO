@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\BrazilCityCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -10,7 +11,7 @@ class OnboardingController extends Controller
 {
     private const TRIAL_DAYS = 7;
 
-    public function show(Request $request): View
+    public function show(Request $request, BrazilCityCatalog $cityCatalog): View
     {
         $user = $request->user();
         $subscription = $user->subscription;
@@ -20,6 +21,8 @@ class OnboardingController extends Controller
             'user' => $user,
             'subscription' => $subscription,
             'uberConnection' => $uberConnection,
+            'brazilStates' => $cityCatalog->states(),
+            'selectedState' => old('state', $cityCatalog->guessStateForCity($user->city)),
             'checklist' => [
                 'profile' => filled($user->phone) && filled($user->city) && filled($user->vehicle_type) && filled($user->work_shift),
                 'location' => (bool) $user->location_permission_granted_at,
@@ -29,14 +32,27 @@ class OnboardingController extends Controller
         ]);
     }
 
-    public function updateProfile(Request $request): RedirectResponse
+    public function updateProfile(Request $request, BrazilCityCatalog $cityCatalog): RedirectResponse
     {
         $validated = $request->validate([
             'phone' => ['required', 'string', 'max:20'],
-            'city' => ['required', 'string', 'max:120'],
+            'state' => ['nullable', 'string', 'size:2'],
+            'city' => [
+                'required',
+                'string',
+                'max:120',
+                function (string $attribute, mixed $value, \Closure $fail) use ($cityCatalog): void {
+                    if (! $cityCatalog->findOfficialCity((string) $value)) {
+                        $fail('Selecione uma cidade valida da lista.');
+                    }
+                },
+            ],
             'vehicle_type' => ['required', 'string', 'max:50'],
             'work_shift' => ['required', 'string', 'max:50'],
         ]);
+
+        $validated['city'] = $cityCatalog->findOfficialCity($validated['city']) ?? $validated['city'];
+        unset($validated['state']);
 
         $request->user()->fill($validated)->save();
 

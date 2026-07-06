@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\BrazilCityCatalog;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,9 +19,11 @@ class RegisteredUserController extends Controller
     /**
      * Display the registration view.
      */
-    public function create(): View
+    public function create(BrazilCityCatalog $cityCatalog): View
     {
-        return view('auth.register');
+        return view('auth.register', [
+            'brazilStates' => $cityCatalog->states(),
+        ]);
     }
 
     /**
@@ -28,13 +31,23 @@ class RegisteredUserController extends Controller
      *
      * @throws ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, BrazilCityCatalog $cityCatalog): RedirectResponse
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'phone' => ['required', 'string', 'max:20'],
-            'city' => ['required', 'string', 'max:120'],
+            'state' => ['nullable', 'string', 'size:2'],
+            'city' => [
+                'required',
+                'string',
+                'max:120',
+                function (string $attribute, mixed $value, \Closure $fail) use ($cityCatalog): void {
+                    if (! $cityCatalog->findOfficialCity((string) $value)) {
+                        $fail('Selecione uma cidade valida da lista.');
+                    }
+                },
+            ],
             'vehicle_type' => ['required', 'string', 'max:50'],
             'work_shift' => ['required', 'string', 'max:50'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
@@ -44,7 +57,7 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
-            'city' => $request->city,
+            'city' => $cityCatalog->findOfficialCity($request->city) ?? $request->city,
             'vehicle_type' => $request->vehicle_type,
             'work_shift' => $request->work_shift,
             'password' => Hash::make($request->password),
