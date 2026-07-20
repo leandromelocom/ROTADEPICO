@@ -10,6 +10,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.Spinner
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -30,6 +31,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var historyRepository: DecisionHistoryRepository
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var isRegisterMode = false
 
     private val notificationsPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -47,8 +49,20 @@ class MainActivity : AppCompatActivity() {
         val loginPassword = findViewById<EditText>(R.id.loginPasswordField)
         val bearerToken = findViewById<EditText>(R.id.bearerTokenField)
         val deviceId = findViewById<EditText>(R.id.deviceIdField)
-        val loginButton = findViewById<Button>(R.id.loginButton)
+        val authStatusValue = findViewById<TextView>(R.id.authStatusValue)
+        val authActionButton = findViewById<Button>(R.id.authActionButton)
+        val authModeToggle = findViewById<TextView>(R.id.authModeToggle)
+        val registerFieldsContainer = findViewById<LinearLayout>(R.id.registerFieldsContainer)
+        val registerName = findViewById<EditText>(R.id.registerNameField)
+        val registerPhone = findViewById<EditText>(R.id.registerPhoneField)
+        val registerCity = findViewById<EditText>(R.id.registerCityField)
+        val registerVehicleType = findViewById<Spinner>(R.id.registerVehicleTypeSpinner)
+        val registerWorkShift = findViewById<Spinner>(R.id.registerWorkShiftSpinner)
+        val registerPasswordConfirmation = findViewById<EditText>(R.id.registerPasswordConfirmationField)
+        val registrationSuccessContainer = findViewById<LinearLayout>(R.id.registrationSuccessContainer)
+        val openOnboardingButton = findViewById<Button>(R.id.openOnboardingButton)
         val saveButton = findViewById<Button>(R.id.saveSettingsButton)
+        val openSettingsButton = findViewById<Button>(R.id.openSettingsButton)
         val notificationAccessButton = findViewById<Button>(R.id.notificationAccessButton)
         val overlayAccessButton = findViewById<Button>(R.id.overlayAccessButton)
         val notificationPermissionButton = findViewById<Button>(R.id.notificationPermissionButton)
@@ -60,21 +74,47 @@ class MainActivity : AppCompatActivity() {
         deviceId.setText(settingsRepository.deviceId())
         loginEmail.setText(settingsRepository.userEmail())
 
-        loginButton.setOnClickListener {
-            findViewById<TextView>(R.id.authStatusValue).text = getString(R.string.auth_status_loading)
+        authModeToggle.setOnClickListener {
+            isRegisterMode = !isRegisterMode
+            registerFieldsContainer.visibility = if (isRegisterMode) View.VISIBLE else View.GONE
+            registrationSuccessContainer.visibility = View.GONE
+            authActionButton.text = getString(if (isRegisterMode) R.string.register_button else R.string.login_button)
+            authModeToggle.text = getString(if (isRegisterMode) R.string.switch_to_login else R.string.switch_to_register)
+        }
+
+        authActionButton.setOnClickListener {
+            authStatusValue.text = getString(
+                if (isRegisterMode) R.string.register_status_loading else R.string.auth_status_loading
+            )
+
+            val resolvedBaseUrl = apiBaseUrl.text.toString().ifBlank { settingsRepository.apiBaseUrl() }
 
             scope.launch {
                 runCatching {
                     withContext(Dispatchers.IO) {
-                        AuthApiClient(apiBaseUrl.text.toString().ifBlank { settingsRepository.apiBaseUrl() })
-                            .login(
+                        val client = AuthApiClient(resolvedBaseUrl)
+
+                        if (isRegisterMode) {
+                            client.register(
+                                name = registerName.text.toString(),
+                                email = loginEmail.text.toString(),
+                                phone = registerPhone.text.toString(),
+                                city = registerCity.text.toString(),
+                                vehicleType = registerVehicleType.selectedItem?.toString().orEmpty(),
+                                workShift = registerWorkShift.selectedItem?.toString().orEmpty(),
+                                password = loginPassword.text.toString(),
+                                passwordConfirmation = registerPasswordConfirmation.text.toString()
+                            )
+                        } else {
+                            client.login(
                                 email = loginEmail.text.toString(),
                                 password = loginPassword.text.toString()
                             )
+                        }
                     }
                 }.onSuccess { auth ->
                     settingsRepository.saveAuthSession(
-                        apiBaseUrl = apiBaseUrl.text.toString().ifBlank { settingsRepository.apiBaseUrl() },
+                        apiBaseUrl = resolvedBaseUrl,
                         bearerToken = auth.token,
                         deviceId = deviceId.text.toString().ifBlank { settingsRepository.deviceId() },
                         userName = auth.user.name,
@@ -82,13 +122,29 @@ class MainActivity : AppCompatActivity() {
                     )
 
                     bearerToken.setText(auth.token)
-                    findViewById<TextView>(R.id.authStatusValue).text =
-                        getString(R.string.auth_status_ready, auth.user.name)
+                    authStatusValue.text = getString(R.string.auth_status_ready, auth.user.name)
+
+                    if (isRegisterMode) {
+                        loginPassword.text.clear()
+                        registerPasswordConfirmation.text.clear()
+                        registerFieldsContainer.visibility = View.GONE
+                        isRegisterMode = false
+                        authActionButton.text = getString(R.string.login_button)
+                        authModeToggle.text = getString(R.string.switch_to_register)
+                        registrationSuccessContainer.visibility = View.VISIBLE
+                    }
+
                     updateStatus()
                 }.onFailure {
-                    findViewById<TextView>(R.id.authStatusValue).text = getString(R.string.auth_status_error)
+                    authStatusValue.text = it.message
+                        ?: getString(if (isRegisterMode) R.string.register_status_error else R.string.auth_status_error)
                 }
             }
+        }
+
+        openOnboardingButton.setOnClickListener {
+            val resolvedBaseUrl = apiBaseUrl.text.toString().ifBlank { settingsRepository.apiBaseUrl() }
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("$resolvedBaseUrl/onboarding")))
         }
 
         saveButton.setOnClickListener {
@@ -98,6 +154,10 @@ class MainActivity : AppCompatActivity() {
                 deviceId = deviceId.text.toString()
             )
             updateStatus()
+        }
+
+        openSettingsButton.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
         }
 
         notificationAccessButton.setOnClickListener {

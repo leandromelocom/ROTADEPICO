@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\MobileAuthController;
 use App\Http\Controllers\MobileOfferDecisionController;
+use App\Http\Controllers\MobileSettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/mobile/auth/register', [MobileAuthController::class, 'register'])
@@ -22,4 +23,11 @@ Route::middleware('mobile.token')->group(function () {
 
     Route::post('/mobile/listener/uber-offers/decision', MobileOfferDecisionController::class)
         ->name('api.mobile.listener.uber-offers.decision');
+
+    Route::get('/mobile/settings', [MobileSettingsController::class, 'show'])
+        ->name('api.mobile.settings.show');
+    Route::patch('/mobile/settings/decision', [MobileSettingsController::class, 'updateDecisionSettings'])
+        ->name('api.mobile.settings.decision.update');
+    Route::patch('/mobile/settings/cost', [MobileSettingsController::class, 'updateCostSettings'])
+        ->name('api.mobile.settings.cost.update');
 });

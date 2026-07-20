@@ -26,10 +26,17 @@ O projeto Android nativo foi iniciado em [android-companion](/home/administrator
 
 ## Fluxo do motorista (sem copiar nada)
 
+**Quem ja tem conta:**
 1. Instala o app Rotadepico Companion no celular.
 2. Abre o app e faz login com o mesmo e-mail e senha da conta Rotadepico — o app busca o token mobile sozinho, sem precisar colar nada.
 3. Libera acesso a notificacoes e overlay (botoes dentro do proprio app).
 4. Abre o app oficial da Uber Driver normalmente.
+
+**Quem ainda nao tem conta:**
+1. Instala o app e toca em "Ainda nao tem conta? Criar conta".
+2. Preenche nome, e-mail, telefone, cidade, veiculo, turno e senha, direto no app (chama `POST /api/mobile/auth/register`).
+3. O app mostra um aviso pra finalizar a assinatura no site (`/onboarding`) — o cadastro sozinho nao libera a analise de corridas, o `MobileOfferDecisionController` exige `onboarding_completed_at` e assinatura ativa, e esse fluxo (trial + checkout Asaas) ainda so existe no site.
+4. Depois de finalizar no site, volta pro app: o login ja fica pronto, so falta liberar notificacoes/overlay.
 
 A URL base ja vem com o dominio de producao como padrao. Trocar URL ou colar um Bearer token manualmente so e necessario em "Opcoes avancadas", pra troubleshooting ou quando o motorista prefere nao digitar a senha no aparelho.
 

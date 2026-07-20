@@ -75,12 +75,131 @@
                 android:textColor="@color/text_primary"
                 android:textColorHint="@color/text_secondary" />
 
+            <LinearLayout
+                android:id="@+id/registerFieldsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <EditText
+                    android:id="@+id/registerNameField"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/field_surface"
+                    android:hint="@string/register_name_hint"
+                    android:inputType="textPersonName"
+                    android:padding="16dp"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_secondary" />
+
+                <EditText
+                    android:id="@+id/registerPhoneField"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/field_surface"
+                    android:hint="@string/register_phone_hint"
+                    android:inputType="phone"
+                    android:padding="16dp"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_secondary" />
+
+                <EditText
+                    android:id="@+id/registerCityField"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/field_surface"
+                    android:hint="@string/register_city_hint"
+                    android:inputType="text"
+                    android:padding="16dp"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_secondary" />
+
+                <Spinner
+                    android:id="@+id/registerVehicleTypeSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/field_surface"
+                    android:padding="16dp"
+                    android:entries="@array/vehicle_type_options" />
+
+                <Spinner
+                    android:id="@+id/registerWorkShiftSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/field_surface"
+                    android:padding="16dp"
+                    android:entries="@array/work_shift_options" />
+
+                <EditText
+                    android:id="@+id/registerPasswordConfirmationField"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/field_surface"
+                    android:hint="@string/register_password_confirmation_hint"
+                    android:inputType="textPassword"
+                    android:padding="16dp"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_secondary" />
+            </LinearLayout>
+
             <Button
-                android:id="@+id/loginButton"
+                android:id="@+id/authActionButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
                 android:text="@string/login_button" />
+
+            <TextView
+                android:id="@+id/authModeToggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:text="@string/switch_to_register"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/registrationSuccessContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/status_card"
+            android:orientation="vertical"
+            android:padding="18dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/registration_success_title"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/registration_success_copy"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/openOnboardingButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/open_onboarding_button" />
         </LinearLayout>
 
         <TextView
@@ -221,6 +340,13 @@
                 android:layout_height="wrap_content"
                 android:textColor="@color/text_primary" />
         </LinearLayout>
+
+        <Button
+            android:id="@+id/openSettingsButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/open_settings_button" />
 
         <Button
             android:id="@+id/notificationAccessButton"

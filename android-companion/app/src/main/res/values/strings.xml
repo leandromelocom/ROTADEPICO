@@ -10,6 +10,18 @@
     <string name="auth_status_loading">Entrando...</string>
     <string name="auth_status_error">Falha no login. Confira e-mail, senha e backend.</string>
     <string name="auth_status_ready">Logado como %1$s</string>
+    <string name="switch_to_register">Ainda nao tem conta? Criar conta</string>
+    <string name="switch_to_login">Ja tem conta? Entrar</string>
+    <string name="register_name_hint">Nome completo</string>
+    <string name="register_phone_hint">Telefone (com DDD)</string>
+    <string name="register_city_hint">Cidade</string>
+    <string name="register_password_confirmation_hint">Confirmar senha</string>
+    <string name="register_button">Criar conta</string>
+    <string name="register_status_loading">Criando conta...</string>
+    <string name="register_status_error">Nao foi possivel criar a conta. Confira os dados e tente de novo.</string>
+    <string name="registration_success_title">Conta criada</string>
+    <string name="registration_success_copy">Falta so um passo: finalize sua assinatura no site para liberar a analise de corridas no app.</string>
+    <string name="open_onboarding_button">Finalizar assinatura no site</string>
     <string name="advanced_settings_show">Opcoes avancadas ⌄</string>
     <string name="advanced_settings_hide">Opcoes avancadas ⌃</string>
     <string name="advanced_settings_copy">So mexa aqui se precisar trocar o servidor ou colar um token manualmente. O login acima ja preenche tudo sozinho.</string>
@@ -33,4 +45,51 @@
     <string name="history_title">Historico local</string>
     <string name="history_subtitle">Ultimas decisoes calculadas no aparelho para consulta rapida do motorista.</string>
     <string name="history_empty">Assim que a primeira corrida for analisada, ela aparece aqui.</string>
+
+    <string name="open_settings_button">Editar preferencias e custo do veiculo</string>
+    <string name="settings_back_link">&#8592; Voltar</string>
+    <string name="settings_title">Preferencias e custo</string>
+    <string name="settings_loading">Carregando valores atuais...</string>
+    <string name="settings_load_error">Nao foi possivel carregar. Faca login primeiro e tente de novo.</string>
+    <string name="settings_ready">Valores carregados do seu perfil.</string>
+    <string name="decision_settings_title">Preferencias operacionais</string>
+    <string name="decision_settings_copy">Perfil de decisao: giro, equilibrado ou premium. As metas por km e por hora sao liquidas, ja descontando o custo do veiculo.</string>
+    <string name="min_offer_fare_hint">Valor minimo da corrida (R$)</string>
+    <string name="min_fare_per_km_hint">Meta minima liquida por km (R$)</string>
+    <string name="min_hourly_rate_hint">Meta minima liquida por hora (R$)</string>
+    <string name="max_pickup_distance_km_hint">Maximo ate embarque (km)</string>
+    <string name="max_pickup_eta_minutes_hint">Maximo ate embarque (min)</string>
+    <string name="save_decision_settings_button">Salvar preferencias</string>
+    <string name="decision_settings_saving">Salvando preferencias...</string>
+    <string name="decision_settings_saved">Preferencias atualizadas.</string>
+    <string name="decision_settings_error">Nao foi possivel salvar as preferencias.</string>
+    <string name="cost_settings_title">Custo operacional do veiculo</string>
+    <string name="cost_settings_copy">Usado pra calcular o valor liquido de cada oferta (tarifa menos combustivel e desgaste).</string>
+    <string name="fuel_consumption_hint">Consumo (km por litro)</string>
+    <string name="fuel_price_hint">Preco do combustivel (R$/litro)</string>
+    <string name="extra_cost_per_km_hint">Custo extra por km (manutencao, pneus)</string>
+    <string name="save_cost_settings_button">Salvar custo operacional</string>
+    <string name="cost_settings_saving">Salvando custo operacional...</string>
+    <string name="cost_settings_saved">Custo operacional atualizado.</string>
+    <string name="cost_settings_error">Nao foi possivel salvar o custo operacional.</string>
+
+    <string-array name="decision_profile_options">
+        <item>giro</item>
+        <item>equilibrado</item>
+        <item>premium</item>
+    </string-array>
+
+    <string-array name="vehicle_type_options">
+        <item>Carro</item>
+        <item>Moto</item>
+        <item>SUV</item>
+    </string-array>
+
+    <string-array name="work_shift_options">
+        <item>Manha</item>
+        <item>Tarde</item>
+        <item>Noite</item>
+        <item>Madrugada</item>
+        <item>Flexivel</item>
+    </string-array>
 </resources>
