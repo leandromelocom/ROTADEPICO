@@ -167,4 +167,64 @@ class MobileOfferApiTest extends TestCase
             'app_version' => '0.1.0',
         ]);
     }
+
+    public function test_bad_destination_zone_gets_warning_tone_not_generic_danger(): void
+    {
+        $plainToken = 'rtp_listener_token_789';
+
+        $user = User::factory()->create([
+            'vehicle_type' => 'Carro',
+            'work_shift' => 'Tarde',
+            'city' => 'Sao Paulo',
+            'onboarding_completed_at' => now(),
+            'mobile_api_token_hash' => hash('sha256', $plainToken),
+            'mobile_api_token_created_at' => now(),
+        ]);
+
+        Subscription::query()->create([
+            'user_id' => $user->id,
+            'plan_code' => 'mensal-pro',
+            'plan_name' => 'Plano Mensal Pro',
+            'status' => 'active',
+            'price_cents' => 3990,
+            'currency' => 'BRL',
+            'started_at' => now(),
+            'renews_at' => now()->addMonth(),
+        ]);
+
+        Opportunity::query()->create([
+            'city' => 'Sao Paulo',
+            'zone_name' => 'Periferia Leste',
+            'score' => 38,
+            'avg_fare' => 18.00,
+            'surge_label' => 'Baixa',
+            'demand_level' => 'Baixa',
+            'best_start_at' => '10:00',
+            'best_end_at' => '14:00',
+            'active_driver_ratio' => 0.88,
+            'pickup_hotspot' => 'Periferia',
+            'tip' => 'Retorno fraco',
+            'trend' => 'descendo',
+            'route_profile' => 'retorno-fraco',
+            'queue_pressure' => 85,
+            'preferred_vehicle_types' => ['Carro'],
+            'preferred_shifts' => ['Tarde'],
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$plainToken)
+            ->postJson(route('api.mobile.offers.analyze'), [
+                'provider' => 'uber',
+                'source' => 'notification',
+                'quoted_fare' => 23.50,
+                'pickup_distance_km' => 4.6,
+                'trip_distance_km' => 11.3,
+                'pickup_eta_minutes' => 13,
+                'destination_zone_name' => 'Periferia Leste',
+            ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('recommendation', 'regiao_destino_ruim');
+        $response->assertJsonPath('overlay.tone', 'warning');
+        $response->assertJsonPath('overlay.headline', 'Destino fraco');
+    }
 }

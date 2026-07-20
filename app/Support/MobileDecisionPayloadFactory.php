@@ -16,13 +16,13 @@ class MobileDecisionPayloadFactory
 
         $tone = match ($recommendation) {
             'vale_a_pena' => 'positive',
-            'destino_ruim' => 'warning',
+            'regiao_destino_ruim' => 'warning',
             default => 'danger',
         };
 
         $headline = match ($recommendation) {
             'vale_a_pena' => 'Aceite rapido',
-            'destino_ruim' => 'Destino fraco',
+            'regiao_destino_ruim' => 'Destino fraco',
             default => 'Nao compensa',
         };
 
