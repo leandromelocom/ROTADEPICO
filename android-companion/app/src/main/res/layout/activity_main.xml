@@ -26,22 +26,10 @@
             android:textColor="@color/text_secondary"
             android:textSize="16sp" />
 
-        <EditText
-            android:id="@+id/apiBaseUrlField"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:background="@drawable/field_surface"
-            android:hint="@string/api_base_url_hint"
-            android:inputType="textUri"
-            android:padding="16dp"
-            android:textColor="@color/text_primary"
-            android:textColorHint="@color/text_secondary" />
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="24dp"
             android:background="@drawable/status_card"
             android:orientation="vertical"
             android:padding="18dp">
@@ -95,35 +83,75 @@
                 android:text="@string/login_button" />
         </LinearLayout>
 
-        <EditText
-            android:id="@+id/bearerTokenField"
+        <TextView
+            android:id="@+id/advancedSettingsToggle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:text="@string/advanced_settings_show"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/advancedSettingsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:background="@drawable/field_surface"
-            android:hint="@string/bearer_token_hint"
-            android:inputType="textNoSuggestions"
-            android:padding="16dp"
-            android:textColor="@color/text_primary"
-            android:textColorHint="@color/text_secondary" />
+            android:orientation="vertical"
+            android:visibility="gone">
 
-        <EditText
-            android:id="@+id/deviceIdField"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/field_surface"
-            android:hint="@string/device_id_hint"
-            android:padding="16dp"
-            android:textColor="@color/text_primary"
-            android:textColorHint="@color/text_secondary" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/advanced_settings_copy"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
 
-        <Button
-            android:id="@+id/saveSettingsButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/save_settings" />
+            <EditText
+                android:id="@+id/apiBaseUrlField"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/field_surface"
+                android:hint="@string/api_base_url_hint"
+                android:inputType="textUri"
+                android:padding="16dp"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_secondary" />
+
+            <EditText
+                android:id="@+id/bearerTokenField"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/field_surface"
+                android:hint="@string/bearer_token_hint"
+                android:inputType="textNoSuggestions"
+                android:padding="16dp"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_secondary" />
+
+            <EditText
+                android:id="@+id/deviceIdField"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/field_surface"
+                android:hint="@string/device_id_hint"
+                android:padding="16dp"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_secondary" />
+
+            <Button
+                android:id="@+id/saveSettingsButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/save_settings" />
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"

@@ -3,13 +3,16 @@
     <string name="app_name">Rotadepico Companion</string>
     <string name="app_subtitle">Escuta a notificacao da Uber, chama o motor do Rotadepico e devolve a decisao na tela do motorista.</string>
     <string name="api_base_url_hint">URL base da plataforma</string>
-    <string name="auth_title">Login do motorista</string>
+    <string name="auth_title">Entrar com sua conta Rotadepico</string>
     <string name="login_email_hint">E-mail do motorista</string>
     <string name="login_password_hint">Senha</string>
     <string name="login_button">Entrar no app</string>
     <string name="auth_status_loading">Entrando...</string>
     <string name="auth_status_error">Falha no login. Confira e-mail, senha e backend.</string>
     <string name="auth_status_ready">Logado como %1$s</string>
+    <string name="advanced_settings_show">Opcoes avancadas ⌄</string>
+    <string name="advanced_settings_hide">Opcoes avancadas ⌃</string>
+    <string name="advanced_settings_copy">So mexa aqui se precisar trocar o servidor ou colar um token manualmente. O login acima ja preenche tudo sozinho.</string>
     <string name="bearer_token_hint">Bearer token gerado no perfil</string>
     <string name="device_id_hint">Identificacao do aparelho</string>
     <string name="save_settings">Salvar configuracao</string>

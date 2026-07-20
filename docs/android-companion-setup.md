@@ -24,14 +24,20 @@ O projeto Android nativo foi iniciado em [android-companion](/home/administrator
 - `DecisionOverlayPresenter`
   exibe overlay e notificacao local com a decisao
 
+## Fluxo do motorista (sem copiar nada)
+
+1. Instala o app Rotadepico Companion no celular.
+2. Abre o app e faz login com o mesmo e-mail e senha da conta Rotadepico — o app busca o token mobile sozinho, sem precisar colar nada.
+3. Libera acesso a notificacoes e overlay (botoes dentro do proprio app).
+4. Abre o app oficial da Uber Driver normalmente.
+
+A URL base ja vem com o dominio de producao como padrao. Trocar URL ou colar um Bearer token manualmente so e necessario em "Opcoes avancadas", pra troubleshooting ou quando o motorista prefere nao digitar a senha no aparelho.
+
 ## Como abrir no Android Studio
 
 1. Abra a pasta `android-companion`.
 2. Aguarde o sync do Gradle.
-3. Ajuste a URL base para seu dominio final.
-4. Gere o token mobile no perfil do motorista.
-5. Cole o token no app companion.
-6. Libere acesso a notificacoes e overlay.
+3. Rode em um emulador ou aparelho e faca login com uma conta de teste.
 
 ## Registro automatico do aparelho
 

@@ -52,6 +52,8 @@ class MainActivity : AppCompatActivity() {
         val notificationAccessButton = findViewById<Button>(R.id.notificationAccessButton)
         val overlayAccessButton = findViewById<Button>(R.id.overlayAccessButton)
         val notificationPermissionButton = findViewById<Button>(R.id.notificationPermissionButton)
+        val advancedSettingsToggle = findViewById<TextView>(R.id.advancedSettingsToggle)
+        val advancedSettingsContainer = findViewById<LinearLayout>(R.id.advancedSettingsContainer)
 
         apiBaseUrl.setText(settingsRepository.apiBaseUrl())
         bearerToken.setText(settingsRepository.bearerToken())
@@ -114,6 +116,14 @@ class MainActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 notificationsPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
+        }
+
+        advancedSettingsToggle.setOnClickListener {
+            val expanded = advancedSettingsContainer.visibility == View.VISIBLE
+            advancedSettingsContainer.visibility = if (expanded) View.GONE else View.VISIBLE
+            advancedSettingsToggle.text = getString(
+                if (expanded) R.string.advanced_settings_show else R.string.advanced_settings_hide
+            )
         }
 
         updateStatus()
