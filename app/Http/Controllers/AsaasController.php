@@ -101,7 +101,7 @@ class AsaasController extends Controller
     {
         $configuredToken = config('services.asaas.webhook_token');
 
-        if (filled($configuredToken) && $request->header('asaas-access-token') !== $configuredToken) {
+        if (filled($configuredToken) && ! hash_equals((string) $configuredToken, (string) $request->header('asaas-access-token'))) {
             abort(403);
         }
 

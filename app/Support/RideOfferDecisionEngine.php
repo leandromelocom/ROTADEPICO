@@ -12,8 +12,10 @@ use Illuminate\Support\Str;
 
 class RideOfferDecisionEngine
 {
-    public function __construct(private readonly DriverDecisionPreferences $preferences)
-    {
+    public function __construct(
+        private readonly DriverDecisionPreferences $preferences,
+        private readonly VehicleOperatingCost $operatingCost,
+    ) {
     }
 
     public function analyze(User $user, array $payload): array
@@ -28,27 +30,48 @@ class RideOfferDecisionEngine
         $matchedOpportunity = $this->matchDestinationOpportunity($payload, $opportunities);
         $historyMetrics = $this->buildHistoryMetrics($history, $opportunities);
         $preferences = $this->preferences->forUser($user);
+        $costPerKm = $this->operatingCost->costPerKm($user);
 
         $quotedFare = (float) ($payload['quoted_fare'] ?? 0);
         $pickupDistanceKm = $this->floatOrNull($payload['pickup_distance_km'] ?? null);
-        $tripDistanceKm = $this->floatOrNull($payload['trip_distance_km'] ?? null);
+        $tripDistanceKmProvided = $this->floatOrNull($payload['trip_distance_km'] ?? null);
         $pickupEtaMinutes = $payload['pickup_eta_minutes'] ?? null;
         $surgeMultiplier = $this->floatOrNull($payload['surge_multiplier'] ?? null);
 
-        $fareEfficiencyScore = $this->fareEfficiencyScore($quotedFare, $tripDistanceKm, $pickupDistanceKm, $historyMetrics);
-        $pickupBurdenScore = $this->pickupBurdenScore($pickupDistanceKm, $pickupEtaMinutes);
+        // A notificacao nem sempre traz a distancia da viagem; sem isso o custo de
+        // combustivel ficaria zerado por falta de dado, escondendo o gasto real do motorista.
+        $costEstimated = $tripDistanceKmProvided === null || $pickupDistanceKm === null;
+        $tripDistanceKm = $tripDistanceKmProvided ?? $historyMetrics['avg_trip_distance_km'];
+
         $destinationContext = $this->destinationContextScore($matchedOpportunity, $user);
-        $historyFitScore = $this->historyFitScore($quotedFare, $historyMetrics['avg_fare']);
-        $surgeBoostScore = $this->surgeBoostScore($surgeMultiplier);
-        $projectedHourlyRate = $this->projectedHourlyRate($quotedFare, $tripDistanceKm, $pickupEtaMinutes);
-        $offerPerKm = $this->offerPerKm($quotedFare, $tripDistanceKm, $pickupDistanceKm);
+
+        // Destino em zona fraca costuma exigir rodar vazio de volta para uma area viavel:
+        // isso tambem consome combustivel e tempo, entao entra na conta como km extra.
+        $returnLegKm = $destinationContext['risk'] === 'high' ? round($tripDistanceKm * 0.35, 2) : 0.0;
+
+        $totalDrivingKm = $tripDistanceKm + ($pickupDistanceKm ?? 0) + $returnLegKm;
+        $estimatedCost = $quotedFare > 0 ? round($totalDrivingKm * $costPerKm, 2) : 0.0;
+        $netFare = $quotedFare > 0 ? max(0.0, round($quotedFare - $estimatedCost, 2)) : null;
+
+        $effectiveKm = max(1.0, $tripDistanceKm + (($pickupDistanceKm ?? 0) * 0.55));
+        $netFarePerKm = $netFare !== null ? round($netFare / $effectiveKm, 2) : null;
+
+        $totalMinutes = $this->totalMinutes($tripDistanceKm, $pickupEtaMinutes, $returnLegKm);
+        $totalHours = max(0.25, $totalMinutes / 60);
+        $projectedHourlyRate = $quotedFare > 0 ? round($quotedFare / $totalHours, 2) : null;
+        $netHourlyRate = $netFare !== null ? round($netFare / $totalHours, 2) : null;
+
+        $avgNetFarePerKm = max(0.5, $historyMetrics['avg_fare_per_km'] - $costPerKm);
+
+        $netEfficiencyScore = $this->netEfficiencyScore($quotedFare, $netFarePerKm, $avgNetFarePerKm);
+        $pickupBurdenScore = $this->pickupBurdenScore($pickupDistanceKm, $pickupEtaMinutes);
+        $netHourlyScore = $this->netHourlyScore($netHourlyRate, $preferences['min_hourly_rate']);
 
         $decisionScore = (int) round(
-            ($fareEfficiencyScore * 0.34) +
-            ($pickupBurdenScore * 0.20) +
+            ($netEfficiencyScore * 0.30) +
+            ($pickupBurdenScore * 0.16) +
             ($destinationContext['score'] * 0.24) +
-            ($historyFitScore * 0.14) +
-            ($surgeBoostScore * 0.08)
+            ($netHourlyScore * 0.30)
         );
 
         $decisionScore = max(0, min(100, $decisionScore));
@@ -58,20 +81,19 @@ class RideOfferDecisionEngine
             $pickupBurdenScore,
             $destinationContext['risk'],
             $quotedFare,
-            $offerPerKm,
-            $projectedHourlyRate,
+            $netFarePerKm,
+            $netHourlyRate,
             $pickupDistanceKm,
             $pickupEtaMinutes,
             $preferences
         );
 
         $reasons = array_values(array_filter([
-            $this->fareReason($quotedFare, $historyMetrics['avg_fare'], $fareEfficiencyScore),
+            $this->netFareReason($quotedFare, $estimatedCost, $netFare, $netHourlyRate, $costEstimated),
             $this->pickupReason($pickupDistanceKm, $pickupEtaMinutes, $pickupBurdenScore),
             $this->destinationReason($matchedOpportunity, $destinationContext),
-            $this->preferenceReason($quotedFare, $offerPerKm, $projectedHourlyRate, $pickupDistanceKm, $pickupEtaMinutes, $preferences),
-            $surgeMultiplier !== null ? 'Multiplicador dinâmico detectado na oferta.' : null,
-            $projectedHourlyRate !== null ? 'Projeção operacional de R$ '.number_format($projectedHourlyRate, 2, ',', '.').'/h se a corrida fechar como lida.' : null,
+            $this->preferenceReason($quotedFare, $netFarePerKm, $netHourlyRate, $pickupDistanceKm, $pickupEtaMinutes, $preferences),
+            $surgeMultiplier !== null ? 'Multiplicador dinâmico já incluído no valor cotado da oferta.' : null,
         ]));
 
         $result = [
@@ -86,17 +108,23 @@ class RideOfferDecisionEngine
             'destination_trend' => $matchedOpportunity?->trend,
             'reasons' => $reasons,
             'signals' => [
-                'fare_efficiency_score' => $fareEfficiencyScore,
+                'net_efficiency_score' => $netEfficiencyScore,
                 'pickup_burden_score' => $pickupBurdenScore,
                 'destination_score' => $destinationContext['score'],
-                'history_fit_score' => $historyFitScore,
-                'surge_boost_score' => $surgeBoostScore,
+                'net_hourly_score' => $netHourlyScore,
             ],
             'driver_preferences' => $preferences,
+            'net' => [
+                'estimated_operating_cost' => $quotedFare > 0 ? $estimatedCost : null,
+                'net_fare' => $netFare,
+                'net_fare_per_km' => $netFarePerKm,
+                'net_hourly_rate' => $netHourlyRate,
+                'cost_estimated' => $costEstimated,
+            ],
             'offer' => [
                 'quoted_fare' => $quotedFare > 0 ? round($quotedFare, 2) : null,
                 'pickup_distance_km' => $pickupDistanceKm,
-                'trip_distance_km' => $tripDistanceKm,
+                'trip_distance_km' => $tripDistanceKmProvided,
                 'pickup_eta_minutes' => $pickupEtaMinutes,
                 'surge_multiplier' => $surgeMultiplier,
                 'destination_zone_name' => $payload['destination_zone_name'] ?? null,
@@ -110,7 +138,7 @@ class RideOfferDecisionEngine
             'quoted_fare' => $result['offer']['quoted_fare'],
             'currency_code' => (string) ($payload['currency_code'] ?? 'BRL'),
             'pickup_distance_km' => $pickupDistanceKm,
-            'trip_distance_km' => $tripDistanceKm,
+            'trip_distance_km' => $tripDistanceKmProvided,
             'pickup_eta_minutes' => $pickupEtaMinutes,
             'surge_multiplier' => $surgeMultiplier,
             'destination_zone_name' => $payload['destination_zone_name'] ?? null,
@@ -122,23 +150,17 @@ class RideOfferDecisionEngine
             'destination_risk' => $destinationContext['risk'],
             'matched_opportunity_zone' => $matchedOpportunity?->zone_name,
             'projected_hourly_rate' => $projectedHourlyRate,
+            'estimated_operating_cost' => $result['net']['estimated_operating_cost'],
+            'net_fare' => $netFare,
+            'net_fare_per_km' => $netFarePerKm,
+            'net_hourly_rate' => $netHourlyRate,
+            'cost_estimated' => $costEstimated,
             'reasons' => $reasons,
             'raw_payload' => $payload['raw_payload'] ?? $payload,
             'evaluated_at' => now(),
         ]);
 
         return $result;
-    }
-
-    private function offerPerKm(float $quotedFare, ?float $tripDistanceKm, ?float $pickupDistanceKm): ?float
-    {
-        if ($quotedFare <= 0) {
-            return null;
-        }
-
-        $effectiveKm = max(1.0, ($tripDistanceKm ?? 0) + (($pickupDistanceKm ?? 0) * 0.55));
-
-        return round($quotedFare / $effectiveKm, 2);
     }
 
     private function matchDestinationOpportunity(array $payload, Collection $opportunities): ?Opportunity
@@ -184,6 +206,10 @@ class RideOfferDecisionEngine
     {
         $avgFare = round((float) ($history->avg('fare') ?? $opportunities->avg('avg_fare') ?? 0), 2);
 
+        $tripDistancesKm = $history
+            ->map(fn (DriverTrip $trip): ?float => $trip->distance_miles ? ((float) $trip->distance_miles * 1.60934) : null)
+            ->filter();
+
         $farePerKm = $history
             ->map(function (DriverTrip $trip): ?float {
                 $tripDistanceKm = $trip->distance_miles ? ((float) $trip->distance_miles * 1.60934) : null;
@@ -200,26 +226,32 @@ class RideOfferDecisionEngine
         return [
             'avg_fare' => $avgFare > 0 ? $avgFare : 28.0,
             'avg_fare_per_km' => $farePerKm ? round((float) $farePerKm, 2) : 3.1,
+            'avg_trip_distance_km' => $tripDistancesKm->avg() ? round((float) $tripDistancesKm->avg(), 2) : 7.0,
         ];
     }
 
-    private function fareEfficiencyScore(float $quotedFare, ?float $tripDistanceKm, ?float $pickupDistanceKm, array $historyMetrics): int
+    private function netEfficiencyScore(float $quotedFare, ?float $netFarePerKm, float $avgNetFarePerKm): int
     {
-        if ($quotedFare <= 0) {
+        if ($quotedFare <= 0 || $netFarePerKm === null) {
             return 35;
         }
 
-        $effectiveKm = max(1.0, ($tripDistanceKm ?? 0) + (($pickupDistanceKm ?? 0) * 0.55));
-        $offerPerKm = $quotedFare / $effectiveKm;
-        $ratio = $offerPerKm / max(1.0, (float) $historyMetrics['avg_fare_per_km']);
+        $ratio = $netFarePerKm / max(0.5, $avgNetFarePerKm);
 
-        return (int) max(15, min(100, round($ratio * 68)));
+        return (int) max(5, min(100, round($ratio * 62)));
     }
 
     private function pickupBurdenScore(?float $pickupDistanceKm, ?int $pickupEtaMinutes): int
     {
-        $distancePenalty = $pickupDistanceKm !== null ? ($pickupDistanceKm * 9) : 14;
-        $etaPenalty = $pickupEtaMinutes !== null ? ($pickupEtaMinutes * 4) : 10;
+        $distancePenalty = $pickupDistanceKm !== null ? ($pickupDistanceKm * 11) : 18;
+
+        // ETA so penaliza o que exceder o esperado para aquela distancia (~2,2 min/km em area urbana),
+        // senao distancia e ETA acabam penalizando duas vezes o mesmo deslocamento.
+        $etaPenalty = 0.0;
+        if ($pickupEtaMinutes !== null) {
+            $expectedEtaMinutes = $pickupDistanceKm !== null ? ($pickupDistanceKm * 2.2) : 6.0;
+            $etaPenalty = max(0.0, $pickupEtaMinutes - $expectedEtaMinutes) * 5;
+        }
 
         return (int) max(0, min(100, round(100 - $distancePenalty - $etaPenalty)));
     }
@@ -266,24 +298,15 @@ class RideOfferDecisionEngine
         ];
     }
 
-    private function historyFitScore(float $quotedFare, float $averageFare): int
+    private function netHourlyScore(?float $netHourlyRate, float $minHourlyRate): int
     {
-        if ($quotedFare <= 0 || $averageFare <= 0) {
-            return 45;
+        if ($netHourlyRate === null) {
+            return 40;
         }
 
-        $ratio = $quotedFare / $averageFare;
+        $ratio = $netHourlyRate / max(1.0, $minHourlyRate);
 
-        return (int) max(10, min(100, round($ratio * 62)));
-    }
-
-    private function surgeBoostScore(?float $surgeMultiplier): int
-    {
-        if ($surgeMultiplier === null) {
-            return 50;
-        }
-
-        return (int) max(30, min(100, round($surgeMultiplier * 36)));
+        return (int) max(5, min(100, round($ratio * 60)));
     }
 
     private function finalRecommendation(
@@ -291,8 +314,8 @@ class RideOfferDecisionEngine
         int $pickupBurdenScore,
         string $destinationRisk,
         float $quotedFare,
-        ?float $offerPerKm,
-        ?float $projectedHourlyRate,
+        ?float $netFarePerKm,
+        ?float $netHourlyRate,
         ?float $pickupDistanceKm,
         ?int $pickupEtaMinutes,
         array $preferences
@@ -308,8 +331,8 @@ class RideOfferDecisionEngine
         }
 
         if (($quotedFare > 0 && $quotedFare < $preferences['min_offer_fare'])
-            || ($offerPerKm !== null && $offerPerKm < $preferences['min_fare_per_km'])
-            || ($projectedHourlyRate !== null && $projectedHourlyRate < $preferences['min_hourly_rate'])) {
+            || ($netFarePerKm !== null && $netFarePerKm < $preferences['min_fare_per_km'])
+            || ($netHourlyRate !== null && $netHourlyRate < $preferences['min_hourly_rate'])) {
             return ['nao_vale', $destinationRisk === 'low' ? 'medium' : 'high'];
         }
 
@@ -326,8 +349,8 @@ class RideOfferDecisionEngine
 
     private function preferenceReason(
         float $quotedFare,
-        ?float $offerPerKm,
-        ?float $projectedHourlyRate,
+        ?float $netFarePerKm,
+        ?float $netHourlyRate,
         ?float $pickupDistanceKm,
         ?int $pickupEtaMinutes,
         array $preferences
@@ -336,12 +359,12 @@ class RideOfferDecisionEngine
             return 'A oferta ficou abaixo do valor minimo que voce definiu para hoje.';
         }
 
-        if ($offerPerKm !== null && $offerPerKm < $preferences['min_fare_per_km']) {
-            return 'O ganho por km ficou abaixo da sua meta configurada.';
+        if ($netFarePerKm !== null && $netFarePerKm < $preferences['min_fare_per_km']) {
+            return 'O ganho liquido por km, depois do combustivel, ficou abaixo da sua meta configurada.';
         }
 
-        if ($projectedHourlyRate !== null && $projectedHourlyRate < $preferences['min_hourly_rate']) {
-            return 'A projeção por hora nao atingiu a sua meta operacional.';
+        if ($netHourlyRate !== null && $netHourlyRate < $preferences['min_hourly_rate']) {
+            return 'A projecao liquida por hora nao atingiu a sua meta operacional.';
         }
 
         if (($pickupDistanceKm !== null && $pickupDistanceKm > $preferences['max_pickup_distance_km'])
@@ -362,21 +385,27 @@ class RideOfferDecisionEngine
         };
     }
 
-    private function fareReason(float $quotedFare, float $averageFare, int $fareEfficiencyScore): ?string
-    {
-        if ($quotedFare <= 0) {
+    private function netFareReason(
+        float $quotedFare,
+        float $estimatedCost,
+        ?float $netFare,
+        ?float $netHourlyRate,
+        bool $costEstimated
+    ): ?string {
+        if ($quotedFare <= 0 || $netFare === null) {
             return 'A notificacao ainda nao trouxe valor confiavel da corrida.';
         }
 
-        if ($quotedFare >= $averageFare) {
-            return "Oferta acima da sua media historica de R$ ".number_format($averageFare, 2, ',', '.').".";
-        }
+        $hourlyLabel = $netHourlyRate !== null
+            ? ' (~R$ '.number_format($netHourlyRate, 2, ',', '.').'/h liquido)'
+            : '';
 
-        if ($fareEfficiencyScore < 45) {
-            return 'Valor fraco para a distancia estimada dessa corrida.';
-        }
+        $estimateNote = $costEstimated
+            ? ' Estimativa com base no seu historico, pois a notificacao nao trouxe todos os dados de distancia.'
+            : '';
 
-        return 'Ticket aceitavel, mas sem sobra forte sobre sua media.';
+        return 'Depois do custo estimado de combustivel (R$ '.number_format($estimatedCost, 2, ',', '.').
+            '), sobram R$ '.number_format($netFare, 2, ',', '.').' liquidos'.$hourlyLabel.'.'.$estimateNote;
     }
 
     private function pickupReason(?float $pickupDistanceKm, ?int $pickupEtaMinutes, int $pickupBurdenScore): string
@@ -409,17 +438,13 @@ class RideOfferDecisionEngine
         return "Destino em {$opportunity->zone_name}, com potencial mediano e exigindo selecao mais fria.";
     }
 
-    private function projectedHourlyRate(float $quotedFare, ?float $tripDistanceKm, ?int $pickupEtaMinutes): ?float
+    private function totalMinutes(float $tripDistanceKm, ?int $pickupEtaMinutes, float $returnLegKm): float
     {
-        if ($quotedFare <= 0) {
-            return null;
-        }
-
-        $tripMinutes = $tripDistanceKm !== null ? max(8.0, ($tripDistanceKm / 24) * 60) : 18.0;
+        $tripMinutes = max(8.0, ($tripDistanceKm / 24) * 60);
         $pickupMinutes = $pickupEtaMinutes !== null ? max(3, $pickupEtaMinutes) : 6;
-        $totalHours = max(0.25, ($pickupMinutes + $tripMinutes) / 60);
+        $returnMinutes = $returnLegKm > 0 ? ($returnLegKm / 24) * 60 : 0.0;
 
-        return round($quotedFare / $totalHours, 2);
+        return $pickupMinutes + $tripMinutes + $returnMinutes;
     }
 
     private function isInsideWindow(CarbonImmutable $now, ?string $start, ?string $end): bool

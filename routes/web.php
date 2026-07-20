@@ -35,6 +35,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('/profile/decision-settings', [ProfileController::class, 'updateDecisionSettings'])->name('profile.decision-settings.update');
+    Route::patch('/profile/cost-settings', [ProfileController::class, 'updateCostSettings'])->name('profile.cost-settings.update');
     Route::post('/profile/mobile-token', [MobileApiTokenController::class, 'store'])->name('profile.mobile-token');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/integrations/uber/redirect', [UberConnectionController::class, 'redirect'])->name('integrations.uber.redirect');

@@ -5,8 +5,10 @@ use App\Http\Controllers\MobileOfferDecisionController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/mobile/auth/register', [MobileAuthController::class, 'register'])
+    ->middleware('throttle:10,1')
     ->name('api.mobile.auth.register');
 Route::post('/mobile/auth/login', [MobileAuthController::class, 'login'])
+    ->middleware('throttle:10,1')
     ->name('api.mobile.auth.login');
 
 Route::middleware('mobile.token')->group(function () {

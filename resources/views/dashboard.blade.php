@@ -255,7 +255,10 @@
                             </div>
                             <p class="profile-copy">
                                 {{ $evaluation->destination_zone_name ?: ($evaluation->matched_opportunity_zone ?: 'Destino nao identificado') }}
-                                • R$ {{ number_format((float) $evaluation->quoted_fare, 2, ',', '.') }}
+                                • R$ {{ number_format((float) $evaluation->quoted_fare, 2, ',', '.') }} bruto
+                                @if ($evaluation->net_fare !== null)
+                                    • R$ {{ number_format((float) $evaluation->net_fare, 2, ',', '.') }} liquido
+                                @endif
                             </p>
                         </article>
                     @endforeach
@@ -610,13 +613,15 @@
 
                 const result = await response.json();
 
+                const money = (value) => 'R$ ' + Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
                 badge.textContent = result.recommendation_label;
                 label.textContent = result.recommendation_label;
                 score.textContent = `Score ${result.decision_score}`;
                 summary.textContent =
-                    `${result.risk_level === 'low' ? 'Risco controlado' : 'Risco elevado'} • ` +
-                    `${result.destination_risk === 'high' ? 'destino ruim' : 'destino aceitavel'} • ` +
-                    `${result.projected_hourly_rate ? 'R$ ' + Number(result.projected_hourly_rate).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '/h' : 'sem taxa horaria projetada'}`;
+                    `${result.net?.net_fare != null ? money(result.net.net_fare) + ' liquido' : 'sem valor liquido calculado'} • ` +
+                    `${result.net?.net_hourly_rate != null ? '~' + money(result.net.net_hourly_rate) + '/h liquido' : 'sem taxa horaria liquida'} • ` +
+                    `${result.destination_risk === 'high' ? 'destino ruim' : 'destino aceitavel'}`;
 
                 reasons.innerHTML = '';
                 result.reasons.forEach((reason) => {

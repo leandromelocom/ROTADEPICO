@@ -236,4 +236,125 @@ class RideOfferDecisionTest extends TestCase
         $response->assertJsonPath('recommendation', 'nao_vale');
         $response->assertJsonPath('driver_preferences.decision_profile', 'premium');
     }
+
+    public function test_high_gross_fare_but_high_operating_cost_flips_to_not_worth_it(): void
+    {
+        $user = User::factory()->create([
+            'vehicle_type' => 'SUV',
+            'work_shift' => 'Noite',
+            'city' => 'Sao Paulo',
+            'onboarding_completed_at' => now(),
+        ]);
+
+        Subscription::query()->create([
+            'user_id' => $user->id,
+            'plan_code' => 'mensal-pro',
+            'plan_name' => 'Plano Mensal Pro',
+            'status' => 'active',
+            'price_cents' => 3990,
+            'currency' => 'BRL',
+            'started_at' => now(),
+            'renews_at' => now()->addMonth(),
+        ]);
+
+        // Tarifa bruta parece boa (R$ 50), mas a viagem eh longa (40km) num SUV: o custo
+        // de combustivel come quase toda a tarifa. Bruto diria "vale a pena", liquido nao.
+        $response = $this->actingAs($user)->postJson(route('radar.offer-decision'), [
+            'provider' => 'uber',
+            'source' => 'notification',
+            'quoted_fare' => 50.00,
+            'pickup_distance_km' => 2.0,
+            'trip_distance_km' => 40.0,
+            'pickup_eta_minutes' => 5,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('recommendation', 'nao_vale');
+
+        $payload = $response->json();
+        $this->assertNotNull($payload['net']['net_fare']);
+        $this->assertLessThan($payload['offer']['quoted_fare'], $payload['net']['net_fare']);
+        $this->assertLessThan(1.0, $payload['net']['net_fare_per_km']);
+    }
+
+    public function test_missing_trip_distance_still_estimates_operating_cost(): void
+    {
+        $user = User::factory()->create([
+            'vehicle_type' => 'Carro',
+            'work_shift' => 'Noite',
+            'city' => 'Sao Paulo',
+            'onboarding_completed_at' => now(),
+        ]);
+
+        Subscription::query()->create([
+            'user_id' => $user->id,
+            'plan_code' => 'mensal-pro',
+            'plan_name' => 'Plano Mensal Pro',
+            'status' => 'active',
+            'price_cents' => 3990,
+            'currency' => 'BRL',
+            'started_at' => now(),
+            'renews_at' => now()->addMonth(),
+        ]);
+
+        $response = $this->actingAs($user)->postJson(route('radar.offer-decision'), [
+            'provider' => 'uber',
+            'source' => 'notification',
+            'quoted_fare' => 40.00,
+            'pickup_distance_km' => 2.0,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('offer.trip_distance_km', null);
+        $response->assertJsonPath('net.cost_estimated', true);
+
+        $payload = $response->json();
+        $this->assertNotNull($payload['net']['net_fare']);
+        $this->assertLessThan(40.0, $payload['net']['net_fare']);
+
+        $this->assertDatabaseHas('ride_offer_evaluations', [
+            'user_id' => $user->id,
+            'cost_estimated' => true,
+        ]);
+    }
+
+    public function test_surge_multiplier_does_not_inflate_score_independently(): void
+    {
+        $user = User::factory()->create([
+            'vehicle_type' => 'Carro',
+            'work_shift' => 'Noite',
+            'city' => 'Sao Paulo',
+            'onboarding_completed_at' => now(),
+        ]);
+
+        Subscription::query()->create([
+            'user_id' => $user->id,
+            'plan_code' => 'mensal-pro',
+            'plan_name' => 'Plano Mensal Pro',
+            'status' => 'active',
+            'price_cents' => 3990,
+            'currency' => 'BRL',
+            'started_at' => now(),
+            'renews_at' => now()->addMonth(),
+        ]);
+
+        $basePayload = [
+            'provider' => 'uber',
+            'source' => 'notification',
+            'quoted_fare' => 35.00,
+            'pickup_distance_km' => 2.0,
+            'trip_distance_km' => 10.0,
+            'pickup_eta_minutes' => 5,
+        ];
+
+        $withoutSurge = $this->actingAs($user)
+            ->postJson(route('radar.offer-decision'), $basePayload)
+            ->json();
+
+        $withSurge = $this->actingAs($user)
+            ->postJson(route('radar.offer-decision'), $basePayload + ['surge_multiplier' => 1.8])
+            ->json();
+
+        $this->assertSame($withoutSurge['decision_score'], $withSurge['decision_score']);
+    }
 }

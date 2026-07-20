@@ -11,6 +11,7 @@ class MobileDecisionPayloadFactory
         $score = (int) ($analysis['decision_score'] ?? 0);
         $riskLevel = (string) ($analysis['risk_level'] ?? 'medium');
         $zone = $analysis['matched_zone'] ?? $analysis['offer']['destination_zone_name'] ?? null;
+        $netFare = $analysis['net']['net_fare'] ?? null;
         $fare = $analysis['offer']['quoted_fare'] ?? null;
 
         $tone = match ($recommendation) {
@@ -26,7 +27,7 @@ class MobileDecisionPayloadFactory
         };
 
         $message = collect([
-            $fare ? 'R$ '.number_format((float) $fare, 2, ',', '.') : null,
+            $netFare !== null ? 'R$ '.number_format((float) $netFare, 2, ',', '.').' líquido' : ($fare ? 'R$ '.number_format((float) $fare, 2, ',', '.') : null),
             $zone ? 'Destino '.$zone : null,
             'Score '.$score,
         ])->filter()->implode(' • ');

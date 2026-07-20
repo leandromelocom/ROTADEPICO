@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Requests\DecisionSettingsUpdateRequest;
+use App\Http\Requests\CostSettingsUpdateRequest;
 use App\Support\DriverDecisionPreferences;
+use App\Support\VehicleOperatingCost;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -29,6 +31,7 @@ class ProfileController extends Controller
         return view('profile.edit', [
             'user' => $request->user(),
             'decisionSettings' => app(DriverDecisionPreferences::class)->forUser($request->user()),
+            'costSettings' => app(VehicleOperatingCost::class)->forUser($request->user()),
             'uberConnection' => $request->user()->uberConnection,
             'tripSummary' => $tripSummary,
             'subscription' => $request->user()->subscription?->loadMissing('charges'),
@@ -59,6 +62,13 @@ class ProfileController extends Controller
         $request->user()->fill($request->validated())->save();
 
         return Redirect::route('profile.edit')->with('decision_settings_status', 'preferencias-operacionais-atualizadas');
+    }
+
+    public function updateCostSettings(CostSettingsUpdateRequest $request): RedirectResponse
+    {
+        $request->user()->fill($request->validated())->save();
+
+        return Redirect::route('profile.edit')->with('cost_settings_status', 'custo-operacional-atualizado');
     }
 
     /**

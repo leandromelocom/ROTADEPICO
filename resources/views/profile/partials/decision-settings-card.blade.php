@@ -1,7 +1,7 @@
 <section>
     <header>
         <h2 class="profile-title">Preferencias operacionais</h2>
-        <p class="profile-copy">Cada motorista define o seu corte. Em dias de giro, pode aceitar mais volume; em dias premium, sobe a regua.</p>
+        <p class="profile-copy">Cada motorista define o seu corte. Em dias de giro, pode aceitar mais volume; em dias premium, sobe a regua. As metas por km e por hora abaixo sao liquidas, ja descontando o custo operacional do seu veiculo.</p>
     </header>
 
     @if (session('decision_settings_status'))
@@ -29,7 +29,7 @@
                 <x-input-error :messages="$errors->get('min_offer_fare')" />
             </div>
             <div class="field">
-                <x-input-label for="min_fare_per_km" value="Meta minima por km" />
+                <x-input-label for="min_fare_per_km" value="Meta minima liquida por km" />
                 <x-text-input id="min_fare_per_km" name="min_fare_per_km" type="number" step="0.01" min="0.5" :value="old('min_fare_per_km', $decisionSettings['min_fare_per_km'])" required />
                 <x-input-error :messages="$errors->get('min_fare_per_km')" />
             </div>
@@ -37,7 +37,7 @@
 
         <div class="field-grid">
             <div class="field">
-                <x-input-label for="min_hourly_rate" value="Meta minima por hora" />
+                <x-input-label for="min_hourly_rate" value="Meta minima liquida por hora" />
                 <x-text-input id="min_hourly_rate" name="min_hourly_rate" type="number" step="0.01" min="10" :value="old('min_hourly_rate', $decisionSettings['min_hourly_rate'])" required />
                 <x-input-error :messages="$errors->get('min_hourly_rate')" />
             </div>
