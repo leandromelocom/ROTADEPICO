@@ -66,6 +66,17 @@ class OnboardingTest extends TestCase
         $this->assertTrue($subscription->trial_ends_at->isFuture());
     }
 
+    public function test_onboarding_page_makes_clear_that_trial_does_not_require_card(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('onboarding.show'));
+
+        $response->assertOk();
+        $response->assertSeeText('7 dias gratis sem cartao');
+        $response->assertSeeText('Nao pedimos cartao nem PIX agora.');
+    }
+
     public function test_checkout_does_not_cancel_active_trial(): void
     {
         $user = User::factory()->create();

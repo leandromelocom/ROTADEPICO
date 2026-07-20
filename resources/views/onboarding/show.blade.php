@@ -67,8 +67,8 @@
                 <div class="spread-row">
                     <div>
                         <p class="metric-label">Etapa 2</p>
-                        <h2 class="section-title">7 dias gratis + assinatura mensal</h2>
-                        <p class="section-copy">Liberamos o radar por 7 dias sem custo. Depois disso, a assinatura mensal mantem mapa de regioes e sincronizacao com a Uber.</p>
+                        <h2 class="section-title">7 dias gratis sem cartao</h2>
+                        <p class="section-copy">Liberamos o radar por 7 dias sem custo e sem exigir cartao de credito. So depois, se o motorista decidir ficar, ele escolhe como pagar.</p>
                     </div>
                     <span class="state-badge {{ $checklist['subscription'] ? 'up' : 'flat' }}">{{ $checklist['subscription'] ? 'ativa' : 'pendente' }}</span>
                 </div>
@@ -77,10 +77,11 @@
                     <div>
                         <p class="metric-label">Plano Mensal Pro</p>
                         <h3 class="hero-price">7 dias<span> gratis</span></h3>
-                        <p class="profile-copy">Ative o teste agora, valide a inteligencia do radar no seu turno e so depois siga para a recorrencia de R$ 39,90/mes.</p>
+                        <p class="profile-copy">Ative o teste agora, use o radar no turno real e tome a decisao depois. Nenhum cartao ou PIX e exigido para começar.</p>
                     </div>
                     <div class="chip-group">
                         <span class="chip">Teste gratis</span>
+                        <span class="chip">Sem cartao</span>
                         <span class="chip">Mapa de regioes</span>
                         <span class="chip">Radar preditivo</span>
                     </div>
@@ -88,11 +89,13 @@
 
                 <article class="pricing-hero" style="margin-top: 16px;">
                     <div>
-                        <p class="metric-label">Recorrencia apos o trial</p>
+                        <p class="metric-label">Pagamento so se decidir continuar</p>
                         <h3 class="hero-price">R$ 39,90<span>/mes</span></h3>
-                        <p class="profile-copy">Checkout recorrente via Asaas, com pagamento hospedado e liberacao automatica quando a cobranca for confirmada.</p>
+                        <p class="profile-copy">Depois dos 7 dias, o motorista pode manter o acesso configurando a cobranca via Asaas com cartao de credito ou PIX, conforme o fluxo disponivel.</p>
                     </div>
                     <div class="chip-group">
+                        <span class="chip">Cartao</span>
+                        <span class="chip">PIX</span>
                         <span class="chip">Conexao Uber</span>
                         <span class="chip">Overlay mobile</span>
                         <span class="chip">Asaas</span>
@@ -119,15 +122,15 @@
                         @csrf
                         <x-primary-button>Ativar 7 dias gratis</x-primary-button>
                     </form>
-                    <p class="profile-copy">O acesso ao radar abre imediatamente por 7 dias. A cobranca nao e feita nesse momento.</p>
+                    <p class="profile-copy">O acesso ao radar abre imediatamente por 7 dias. Nao pedimos cartao nem PIX agora.</p>
                 @endunless
 
                 @if ($subscription?->status === 'trialing' || $checklist['subscription'])
                     <form method="POST" action="{{ route('onboarding.subscription') }}" class="stack-actions" style="margin-top: 12px;">
                         @csrf
-                        <x-primary-button>{{ $subscription?->provider_payment_link_id ? 'Gerar novo checkout Asaas' : 'Configurar cobranca apos trial' }}</x-primary-button>
+                        <x-primary-button>{{ $subscription?->provider_payment_link_id ? 'Gerar novo checkout Asaas' : 'Quero continuar apos os 7 dias' }}</x-primary-button>
                     </form>
-                    <p class="profile-copy">Recomendado: ja deixe a cobranca preparada para nao perder acesso quando o trial terminar.</p>
+                    <p class="profile-copy">Opcional durante o trial. So use quando quiser deixar cartao ou PIX preparado para continuar apos o periodo gratis.</p>
                 @endif
             </section>
 

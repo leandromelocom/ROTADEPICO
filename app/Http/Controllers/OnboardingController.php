@@ -100,7 +100,7 @@ class OnboardingController extends Controller
         );
 
         return redirect()->route('onboarding.show')
-            ->with('onboarding_status', 'Teste gratis ativado por 7 dias. Use o radar e configure a cobranca antes do fim do periodo.');
+            ->with('onboarding_status', 'Teste gratis ativado por 7 dias, sem cartao neste momento. Se decidir continuar, voce configura o pagamento depois.');
     }
 
     public function finish(Request $request): RedirectResponse
