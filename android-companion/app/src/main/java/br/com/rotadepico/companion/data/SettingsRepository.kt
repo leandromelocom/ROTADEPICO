@@ -25,6 +25,14 @@ class SettingsRepository(private val context: Context) {
             .apply()
     }
 
+    fun clearSession() {
+        preferences.edit()
+            .remove(KEY_BEARER_TOKEN)
+            .remove(KEY_USER_NAME)
+            .remove(KEY_USER_EMAIL)
+            .apply()
+    }
+
     fun apiBaseUrl(): String = preferences.getString(KEY_API_BASE_URL, DEFAULT_API_BASE_URL).orEmpty()
 
     fun bearerToken(): String = preferences.getString(KEY_BEARER_TOKEN, "").orEmpty()

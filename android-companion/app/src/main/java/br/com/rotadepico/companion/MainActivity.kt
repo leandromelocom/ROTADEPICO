@@ -12,6 +12,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import br.com.rotadepico.companion.data.DecisionHistoryRepository
@@ -32,6 +33,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var historyRepository: DecisionHistoryRepository
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var isRegisterMode = false
+
+    private lateinit var authCard: LinearLayout
+    private lateinit var loggedInBar: LinearLayout
+    private lateinit var loggedInUserLabel: TextView
+    private lateinit var loggedInActionsContainer: LinearLayout
+    private lateinit var subscriptionPendingContainer: LinearLayout
 
     private val notificationsPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -59,8 +66,8 @@ class MainActivity : AppCompatActivity() {
         val registerVehicleType = findViewById<Spinner>(R.id.registerVehicleTypeSpinner)
         val registerWorkShift = findViewById<Spinner>(R.id.registerWorkShiftSpinner)
         val registerPasswordConfirmation = findViewById<EditText>(R.id.registerPasswordConfirmationField)
-        val registrationSuccessContainer = findViewById<LinearLayout>(R.id.registrationSuccessContainer)
         val openOnboardingButton = findViewById<Button>(R.id.openOnboardingButton)
+        val logoutButton = findViewById<Button>(R.id.logoutButton)
         val saveButton = findViewById<Button>(R.id.saveSettingsButton)
         val openSettingsButton = findViewById<Button>(R.id.openSettingsButton)
         val notificationAccessButton = findViewById<Button>(R.id.notificationAccessButton)
@@ -69,15 +76,22 @@ class MainActivity : AppCompatActivity() {
         val advancedSettingsToggle = findViewById<TextView>(R.id.advancedSettingsToggle)
         val advancedSettingsContainer = findViewById<LinearLayout>(R.id.advancedSettingsContainer)
 
+        authCard = findViewById(R.id.authCard)
+        loggedInBar = findViewById(R.id.loggedInBar)
+        loggedInUserLabel = findViewById(R.id.loggedInUserLabel)
+        loggedInActionsContainer = findViewById(R.id.loggedInActionsContainer)
+        subscriptionPendingContainer = findViewById(R.id.subscriptionPendingContainer)
+
         apiBaseUrl.setText(settingsRepository.apiBaseUrl())
         bearerToken.setText(settingsRepository.bearerToken())
         deviceId.setText(settingsRepository.deviceId())
         loginEmail.setText(settingsRepository.userEmail())
 
+        applyAuthState(loggedIn = settingsRepository.bearerToken().isNotBlank())
+
         authModeToggle.setOnClickListener {
             isRegisterMode = !isRegisterMode
             registerFieldsContainer.visibility = if (isRegisterMode) View.VISIBLE else View.GONE
-            registrationSuccessContainer.visibility = View.GONE
             authActionButton.text = getString(if (isRegisterMode) R.string.register_button else R.string.login_button)
             authModeToggle.text = getString(if (isRegisterMode) R.string.switch_to_login else R.string.switch_to_register)
         }
@@ -88,13 +102,14 @@ class MainActivity : AppCompatActivity() {
             )
 
             val resolvedBaseUrl = apiBaseUrl.text.toString().ifBlank { settingsRepository.apiBaseUrl() }
+            val wasRegisterMode = isRegisterMode
 
             scope.launch {
                 runCatching {
                     withContext(Dispatchers.IO) {
                         val client = AuthApiClient(resolvedBaseUrl)
 
-                        if (isRegisterMode) {
+                        if (wasRegisterMode) {
                             client.register(
                                 name = registerName.text.toString(),
                                 email = loginEmail.text.toString(),
@@ -122,23 +137,53 @@ class MainActivity : AppCompatActivity() {
                     )
 
                     bearerToken.setText(auth.token)
-                    authStatusValue.text = getString(R.string.auth_status_ready, auth.user.name)
 
-                    if (isRegisterMode) {
-                        loginPassword.text.clear()
-                        registerPasswordConfirmation.text.clear()
-                        registerFieldsContainer.visibility = View.GONE
-                        isRegisterMode = false
-                        authActionButton.text = getString(R.string.login_button)
-                        authModeToggle.text = getString(R.string.switch_to_register)
-                        registrationSuccessContainer.visibility = View.VISIBLE
-                    }
+                    Toast.makeText(
+                        this@MainActivity,
+                        getString(if (wasRegisterMode) R.string.register_toast_success else R.string.login_toast_success, auth.user.name),
+                        Toast.LENGTH_LONG
+                    ).show()
 
+                    loginPassword.text.clear()
+                    registerPasswordConfirmation.text.clear()
+                    registerFieldsContainer.visibility = View.GONE
+                    isRegisterMode = false
+                    authActionButton.text = getString(R.string.login_button)
+                    authModeToggle.text = getString(R.string.switch_to_register)
+
+                    applyAuthState(loggedIn = true)
+                    applySubscriptionState(ready = auth.user.isReady)
                     updateStatus()
                 }.onFailure {
-                    authStatusValue.text = it.message
-                        ?: getString(if (isRegisterMode) R.string.register_status_error else R.string.auth_status_error)
+                    val errorMessage = it.message
+                        ?: getString(if (wasRegisterMode) R.string.register_status_error else R.string.auth_status_error)
+
+                    authStatusValue.text = errorMessage
+                    Toast.makeText(this@MainActivity, errorMessage, Toast.LENGTH_LONG).show()
                 }
+            }
+        }
+
+        logoutButton.setOnClickListener {
+            val resolvedBaseUrl = settingsRepository.apiBaseUrl()
+            val token = settingsRepository.bearerToken()
+
+            scope.launch {
+                if (token.isNotBlank()) {
+                    runCatching {
+                        withContext(Dispatchers.IO) { AuthApiClient(resolvedBaseUrl).logout(token) }
+                    }
+                }
+
+                settingsRepository.clearSession()
+                bearerToken.setText("")
+                loginEmail.setText("")
+                loginPassword.text.clear()
+
+                applyAuthState(loggedIn = false)
+                applySubscriptionState(ready = true)
+                Toast.makeText(this@MainActivity, R.string.logout_toast, Toast.LENGTH_SHORT).show()
+                updateStatus()
             }
         }
 
@@ -147,17 +192,18 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("$resolvedBaseUrl/onboarding")))
         }
 
+        openSettingsButton.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
         saveButton.setOnClickListener {
             settingsRepository.save(
                 apiBaseUrl = apiBaseUrl.text.toString(),
                 bearerToken = bearerToken.text.toString(),
                 deviceId = deviceId.text.toString()
             )
+            applyAuthState(loggedIn = settingsRepository.bearerToken().isNotBlank())
             updateStatus()
-        }
-
-        openSettingsButton.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
         }
 
         notificationAccessButton.setOnClickListener {
@@ -192,6 +238,40 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateStatus()
+
+        if (settingsRepository.bearerToken().isNotBlank()) {
+            refreshAccountStatus()
+        }
+    }
+
+    private fun applyAuthState(loggedIn: Boolean) {
+        authCard.visibility = if (loggedIn) View.GONE else View.VISIBLE
+        loggedInBar.visibility = if (loggedIn) View.VISIBLE else View.GONE
+        loggedInActionsContainer.visibility = if (loggedIn) View.VISIBLE else View.GONE
+
+        if (loggedIn) {
+            val name = settingsRepository.userName().ifBlank { settingsRepository.userEmail() }
+            loggedInUserLabel.text = name
+        } else {
+            subscriptionPendingContainer.visibility = View.GONE
+        }
+    }
+
+    private fun applySubscriptionState(ready: Boolean) {
+        subscriptionPendingContainer.visibility = if (ready) View.GONE else View.VISIBLE
+    }
+
+    private fun refreshAccountStatus() {
+        val resolvedBaseUrl = settingsRepository.apiBaseUrl()
+        val token = settingsRepository.bearerToken()
+
+        scope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) { AuthApiClient(resolvedBaseUrl).me(token) }
+            }.onSuccess { user ->
+                applySubscriptionState(ready = user.isReady)
+            }
+        }
     }
 
     private fun updateStatus() {

@@ -10,6 +10,8 @@
     <string name="auth_status_loading">Entrando...</string>
     <string name="auth_status_error">Falha no login. Confira e-mail, senha e backend.</string>
     <string name="auth_status_ready">Logado como %1$s</string>
+    <string name="login_toast_success">Login realizado. Bem-vindo, %1$s.</string>
+    <string name="register_toast_success">Conta criada com sucesso, %1$s!</string>
     <string name="switch_to_register">Ainda nao tem conta? Criar conta</string>
     <string name="switch_to_login">Ja tem conta? Entrar</string>
     <string name="register_name_hint">Nome completo</string>
@@ -19,9 +21,12 @@
     <string name="register_button">Criar conta</string>
     <string name="register_status_loading">Criando conta...</string>
     <string name="register_status_error">Nao foi possivel criar a conta. Confira os dados e tente de novo.</string>
-    <string name="registration_success_title">Conta criada</string>
-    <string name="registration_success_copy">Falta so um passo: finalize sua assinatura no site para liberar a analise de corridas no app.</string>
+    <string name="registration_success_title">Falta finalizar a assinatura</string>
+    <string name="registration_success_copy">Sua conta esta pronta, mas a analise de corridas so libera depois que voce finalizar o cadastro e a assinatura no site.</string>
     <string name="open_onboarding_button">Finalizar assinatura no site</string>
+    <string name="logged_in_bar_title">Sua conta</string>
+    <string name="logout_button">Sair</string>
+    <string name="logout_toast">Voce saiu da conta.</string>
     <string name="advanced_settings_show">Opcoes avancadas ⌄</string>
     <string name="advanced_settings_hide">Opcoes avancadas ⌃</string>
     <string name="advanced_settings_copy">So mexa aqui se precisar trocar o servidor ou colar um token manualmente. O login acima ja preenche tudo sozinho.</string>

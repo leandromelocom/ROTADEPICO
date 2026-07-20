@@ -6,6 +6,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Spinner
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import br.com.rotadepico.companion.data.SettingsRepository
 import br.com.rotadepico.companion.model.CostSettings
@@ -88,8 +89,11 @@ class SettingsActivity : AppCompatActivity() {
                     withContext(Dispatchers.IO) { client.updateDecisionSettings(settings) }
                 }.onSuccess {
                     statusValue.text = getString(R.string.decision_settings_saved)
+                    Toast.makeText(this@SettingsActivity, R.string.decision_settings_saved, Toast.LENGTH_LONG).show()
                 }.onFailure {
-                    statusValue.text = it.message ?: getString(R.string.decision_settings_error)
+                    val errorMessage = it.message ?: getString(R.string.decision_settings_error)
+                    statusValue.text = errorMessage
+                    Toast.makeText(this@SettingsActivity, errorMessage, Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -108,8 +112,11 @@ class SettingsActivity : AppCompatActivity() {
                     withContext(Dispatchers.IO) { client.updateCostSettings(settings) }
                 }.onSuccess {
                     statusValue.text = getString(R.string.cost_settings_saved)
+                    Toast.makeText(this@SettingsActivity, R.string.cost_settings_saved, Toast.LENGTH_LONG).show()
                 }.onFailure {
-                    statusValue.text = it.message ?: getString(R.string.cost_settings_error)
+                    val errorMessage = it.message ?: getString(R.string.cost_settings_error)
+                    statusValue.text = errorMessage
+                    Toast.makeText(this@SettingsActivity, errorMessage, Toast.LENGTH_LONG).show()
                 }
             }
         }

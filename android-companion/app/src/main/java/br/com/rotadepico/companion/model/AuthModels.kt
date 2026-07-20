@@ -11,5 +11,9 @@ data class MobileUser(
     val email: String,
     val city: String?,
     val vehicleType: String?,
-    val workShift: String?
-)
+    val workShift: String?,
+    val subscriptionActive: Boolean,
+    val onboardingCompleted: Boolean
+) {
+    val isReady: Boolean get() = subscriptionActive && onboardingCompleted
+}
