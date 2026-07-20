@@ -7,6 +7,7 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.WindowManager
@@ -32,6 +33,13 @@ class DecisionOverlayPresenter(private val context: Context) {
         showHeadsUpNotification(
             title = decision.pushNotification?.title ?: context.getString(R.string.overlay_default_title),
             body = decision.pushNotification?.body ?: context.getString(R.string.overlay_default_message)
+        )
+    }
+
+    fun showFallback(reason: String) {
+        showHeadsUpNotification(
+            title = context.getString(R.string.analysis_unavailable_title),
+            body = context.getString(R.string.analysis_unavailable_body, reason)
         )
     }
 
@@ -70,8 +78,13 @@ class DecisionOverlayPresenter(private val context: Context) {
                 } catch (_: Exception) {
                 }
             }, dismissAfterMs)
-        } catch (_: Exception) {
+        } catch (exception: Exception) {
+            Log.w(TAG, "Nao foi possivel desenhar o overlay (permissao de overlay concedida?)", exception)
         }
+    }
+
+    companion object {
+        private const val TAG = "RotaDePicoOverlay"
     }
 
     private fun showHeadsUpNotification(title: String, body: String) {

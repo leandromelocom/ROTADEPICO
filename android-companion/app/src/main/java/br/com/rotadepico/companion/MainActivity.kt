@@ -1,11 +1,13 @@
 package br.com.rotadepico.companion
 
 import android.Manifest
+import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.service.notification.NotificationListenerService
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -19,6 +21,7 @@ import br.com.rotadepico.companion.data.DecisionHistoryRepository
 import br.com.rotadepico.companion.data.SettingsRepository
 import br.com.rotadepico.companion.model.DecisionHistoryEntry
 import br.com.rotadepico.companion.network.AuthApiClient
+import br.com.rotadepico.companion.service.UberNotificationListenerService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -202,8 +205,7 @@ class MainActivity : AppCompatActivity() {
                 bearerToken = bearerToken.text.toString(),
                 deviceId = deviceId.text.toString()
             )
-            applyAuthState(loggedIn = settingsRepository.bearerToken().isNotBlank())
-            updateStatus()
+            syncAccountFromServer(notifyOnFailure = true)
         }
 
         notificationAccessButton.setOnClickListener {
@@ -240,7 +242,13 @@ class MainActivity : AppCompatActivity() {
         updateStatus()
 
         if (settingsRepository.bearerToken().isNotBlank()) {
-            refreshAccountStatus()
+            syncAccountFromServer(notifyOnFailure = false)
+        }
+
+        if (settingsRepository.hasNotificationAccess()) {
+            NotificationListenerService.requestRebind(
+                ComponentName(this, UberNotificationListenerService::class.java)
+            )
         }
     }
 
@@ -261,15 +269,36 @@ class MainActivity : AppCompatActivity() {
         subscriptionPendingContainer.visibility = if (ready) View.GONE else View.VISIBLE
     }
 
-    private fun refreshAccountStatus() {
+    private fun syncAccountFromServer(notifyOnFailure: Boolean) {
         val resolvedBaseUrl = settingsRepository.apiBaseUrl()
         val token = settingsRepository.bearerToken()
+
+        if (token.isBlank()) {
+            applyAuthState(loggedIn = false)
+            updateStatus()
+            return
+        }
 
         scope.launch {
             runCatching {
                 withContext(Dispatchers.IO) { AuthApiClient(resolvedBaseUrl).me(token) }
             }.onSuccess { user ->
+                settingsRepository.saveAuthSession(
+                    apiBaseUrl = resolvedBaseUrl,
+                    bearerToken = token,
+                    deviceId = settingsRepository.deviceId(),
+                    userName = user.name,
+                    userEmail = user.email
+                )
+
+                applyAuthState(loggedIn = true)
                 applySubscriptionState(ready = user.isReady)
+                updateStatus()
+            }.onFailure {
+                if (notifyOnFailure) {
+                    val message = it.message ?: getString(R.string.settings_load_error)
+                    Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+                }
             }
         }
     }

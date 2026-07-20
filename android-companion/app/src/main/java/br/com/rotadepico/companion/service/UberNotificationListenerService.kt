@@ -2,6 +2,7 @@ package br.com.rotadepico.companion.service
 
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.util.Log
 import br.com.rotadepico.companion.data.SettingsRepository
 import br.com.rotadepico.companion.model.OfferDecisionRequest
 import br.com.rotadepico.companion.network.DecisionApiClient
@@ -21,16 +22,30 @@ class UberNotificationListenerService : NotificationListenerService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val recentPayloads = ConcurrentHashMap<String, Long>()
 
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        Log.i(TAG, "Listener conectado - pronto para ler notificacoes de $UBER_DRIVER_PACKAGE")
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         if (sbn.packageName != UBER_DRIVER_PACKAGE) {
             return
         }
 
-        val extras = sbn.notification.extras ?: return
+        Log.d(TAG, "Notificacao recebida de $UBER_DRIVER_PACKAGE")
+
+        val extras = sbn.notification.extras
+        if (extras == null) {
+            Log.w(TAG, "Notificacao sem extras, ignorada")
+            return
+        }
+
         val title = extras.getCharSequence("android.title")?.toString()
-        val text = extras.getCharSequence("android.text")?.toString()?.trim().orEmpty()
+        val text = (extras.getCharSequence("android.bigText") ?: extras.getCharSequence("android.text"))
+            ?.toString()?.trim().orEmpty()
 
         if (text.isBlank()) {
+            Log.w(TAG, "Notificacao da Uber sem texto legivel (android.text/android.bigText vazios), ignorada")
             return
         }
 
@@ -39,6 +54,7 @@ class UberNotificationListenerService : NotificationListenerService() {
         val lastSeen = recentPayloads[dedupeKey]
 
         if (lastSeen != null && now - lastSeen < 2500) {
+            Log.d(TAG, "Notificacao duplicada dentro de 2,5s, ignorada")
             return
         }
 
@@ -47,6 +63,7 @@ class UberNotificationListenerService : NotificationListenerService() {
         val settings = SettingsRepository(applicationContext)
 
         if (settings.apiBaseUrl().isBlank() || settings.bearerToken().isBlank()) {
+            Log.w(TAG, "Sem URL/token configurado - faca login no app antes de ficar online na Uber")
             return
         }
 
@@ -70,9 +87,14 @@ class UberNotificationListenerService : NotificationListenerService() {
                     bearerToken = settings.bearerToken()
                 )
 
-                val decision = client.analyze(requestPayload)
+                client.analyze(requestPayload)
+            }.onSuccess { decision ->
                 DecisionHistoryRepository(applicationContext).saveDecision(text, decision)
                 DecisionOverlayPresenter(applicationContext).show(decision)
+            }.onFailure { throwable ->
+                Log.e(TAG, "Falha ao analisar oferta da Uber", throwable)
+                DecisionOverlayPresenter(applicationContext)
+                    .showFallback(throwable.message ?: "erro desconhecido")
             }
         }
     }
@@ -83,6 +105,7 @@ class UberNotificationListenerService : NotificationListenerService() {
     }
 
     companion object {
+        private const val TAG = "RotaDePicoListener"
         private const val UBER_DRIVER_PACKAGE = "com.ubercab.driver"
     }
 }
